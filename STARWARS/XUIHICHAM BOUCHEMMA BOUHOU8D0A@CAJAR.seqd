@@ -1,0 +1,21 @@
+│├XUIHICHAM BOUCHEMMA BOUHOU8D0A    │I.M. Yoda                          
+│                                   │                                   
+││DATE:2022-10-21 13:06:31:473      │                                   
+││CONT:SElDSEFNIEJPVUNIRU1NQSBCT1VIT│                                   
+│├─────────────────────────────────>│                                   
+│                                   │                                   
+│                                   ││DATE:2022-10-21 13:06:31:581      
+│                                   ││CONT:Confirm check-in from agent X
+│<───────────────────────────────────┤                                  
+│                                   │                                   
+││DATE:2022-10-21 13:06:59:574      │                                   
+││CONT:Request checkout             │                                   
+│├─────────────────────────────────>│                                   
+│                                   │                                   
+│                                   ││DATE:2022-10-21 13:06:59:673      
+│                                   ││CONT:Confirm check-out of agent XU
+│<───────────────────────────────────┤                                  
+│                                   │                                   
+ │DATE:2022-10-21 13:06:59:675      │                                   
+                                    │                                   
+
