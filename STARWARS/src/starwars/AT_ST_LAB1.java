@@ -23,7 +23,7 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
              current_goal;
     String current_city;
     Point3D city_coord;
-    
+    Map<String, String> reportMap = new HashMap<String, String>();
     
     @Override
     public Status MyOpenProblem() {
@@ -129,6 +129,13 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
         session = LARVAblockingReceive();
         getEnvironment().setExternalPerceptions(session.getContent());
         Message("Found " + getEnvironment().getPeople().length + " " + type + " in " + getEnvironment().getCurrentCity());
+        if(reportMap.containsKey(getEnvironment().getCurrentCity())){
+            String tmp = reportMap.get(getEnvironment().getCurrentCity());
+            tmp += " " + type + " " + getEnvironment().getPeople().length;
+            reportMap.put(getEnvironment().getCurrentCity(), tmp);
+        } else {
+            reportMap.put(getEnvironment().getCurrentCity(), new String(type + " " + getEnvironment().getPeople().length));
+        }
         return myStatus;
     }
     
@@ -162,16 +169,41 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
     }
     
     protected Status doReportTypeGoal(String type){
-        // HAY QUE HACER EL STRING DEL REPORT
-        String Report = "";
+        String Report = "REPORT;";
+        Iterator it = reportMap.keySet().iterator();
         
+        boolean first = true;
+        for (var entry : reportMap.entrySet()) {
+            if(first){
+                Report += entry.getKey() + " " + entry.getValue();
+                first = false;
+            } else
+                Report += ";" + entry.getKey() + " " + entry.getValue();
+        }
+        Report += ";";
+
+        //Info("REPORT:" + Report);
+        //this.getEnvironment().
         Info("Reporting " + type);
-        ArrayList<String> services = this.DFGetServiceList();
-        ArrayList<String> providers = this.DFGetProviderList();
-        String receiverAgent = providers.get(services.indexOf("TYPE " + type.toUpperCase()));
+        DroidShip.Debug();
+        ArrayList<String> providers = this.DFGetAllProvidersOf("TYPE " + type.toUpperCase());
+        
+        String receiverAgent = "";
+        for(String provider: providers){
+            if(this.DFHasService(provider, sessionKey)){
+                receiverAgent = provider;
+            }
+        }
+        //ArrayList<String> services = this.DFGetServiceList();
+        //ArrayList<String> providers = this.DFGetProviderList();
+        
         
         Info("Agent type " + type + ": " + receiverAgent + " found!");
+        outbox = new ACLMessage();
+        outbox.setSender(getAID());
         outbox.addReceiver(new AID(receiverAgent, AID.ISLOCALNAME));
+        outbox.setPerformative(ACLMessage.INFORM_REF);
+        outbox.setProtocol("DROIDSHIP");
         outbox.setContent(Report);
         this.LARVAsend(outbox);
         session = LARVAblockingReceive();
@@ -222,5 +254,26 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
     public Status MyCloseProblem(){
         this.doDestroyNPC();
         return super.MyCloseProblem();
+    }
+    
+    @Override
+    public double goAvoid(Environment E, Choice a){
+        if (E.isTargetLeft()){
+            if (a.getName().equals("LEFT")) {
+            nextWhichwall = "RIGHT";
+            nextdistance = E.getDistance();
+            nextPoint = E.getGPS();
+            return Choice.ANY_VALUE;
+            } 
+        }else{
+           if (a.getName().equals("RIGHT")) {
+            nextWhichwall = "LEFT";
+            nextdistance = E.getDistance();
+            nextPoint = E.getGPS();
+            return Choice.ANY_VALUE;
+            }   
+        }
+        
+        return Choice.MAX_UTILITY;
     }
 }
