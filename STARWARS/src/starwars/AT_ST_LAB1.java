@@ -8,12 +8,17 @@ package starwars;
 import Environment.Environment;
 import agents.BB1F;
 import agents.DEST;
+import agents.DroidShip;
 import agents.MTT;
 import agents.YV;
+import ai.Choice;
 import geometry.Point3D;
 import jade.core.AID;
 import jade.lang.acl.ACLMessage;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 /**
  *
  * @author dcardenas11
