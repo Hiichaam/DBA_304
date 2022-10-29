@@ -30,6 +30,10 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
     Point3D city_coord;
     Map<String, String> reportMap = new HashMap<String, String>();
     
+    // Igual que en los agentes anteriores, excepto:
+    // CAMBIO EN EL SESION ALIAS
+    // Se añade en el request open problem el sessionAlias para poder
+    // hacer sesiones compartidas, en este caso con los NPCs
     @Override
     public Status MyOpenProblem() {
 
@@ -39,7 +43,9 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
         }
         problemManager = this.DFGetAllProvidersOf(service).get(0);
         Info("Found problem manager " + problemManager);
-        // Selector of the problem to solve
+        
+        // Seleccionar el problema, en este caso son los APR, NOT, SOB, MAT
+        // de la práctica
         problem = this.inputSelect("Please select problem to solve", problems, problem);
         if (problem == null) {
             return Status.CHECKOUT;
@@ -47,6 +53,8 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
         this.outbox = new ACLMessage();
         outbox.setSender(getAID());
         outbox.addReceiver(new AID(problemManager, AID.ISLOCALNAME));
+        
+        // Cambio añadido
         outbox.setContent("Request open " + problem + " alias " + sessionAlias);
         this.LARVAsend(outbox);
         Info("opening problem " + problem + " to " + problemManager);
@@ -69,17 +77,25 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
     @Override
     public Status MyJoinSession(){
         outbox = session.createReply();
+        
+        // Pedir las ciudades disponibles
         outbox.setContent("Query cities session " + sessionKey);
         this.LARVAsend(outbox);
         session = this.LARVAblockingReceive();
         this.getEnvironment().setExternalPerceptions(session.getContent());
+        
+        // Guardamos la lista de ciudades proporcionada
         cities = getEnvironment().getCityList();
+        
+        // Preguntamos al usuario en qué ciudad quiere aparecer
         current_city = this.inputSelect("Please select city to start", cities, "");
         city_coord = getEnvironment().getCityPosition(current_city);
         
         this.resetAutoNAV();
         this.DFAddMyServices(new String[]{"TYPE ITT"});
         outbox = session.createReply();
+        
+        // Iniciamos sesión en las coordenadas de la ciudad seleccionada
         outbox.setContent("Request join session " + sessionKey + " at " + city_coord.getXInt() + " " + city_coord.getYInt());
         this.LARVAsend(outbox);
         session = this.LARVAblockingReceive();
@@ -89,21 +105,29 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
             return Status.CLOSEPROBLEM;
         }
         
+        // Ejecutar los NPCs
         this.doPrepareNPC(1, DEST.class);
         //this.doPrepareNPC(2, BB1F.class);
         //this.doPrepareNPC(0, YV.class);
         //this.doPrepareNPC(0, MTT.class);
 
         outbox = session.createReply();
+        
+        // Obtenemos las misiones del problema abierto.
+        // IMPORTANTE: tiene que coincidir con el problema abierto
         outbox.setContent("Query missions session " + sessionKey);
         this.LARVAsend(outbox);
         session = this.LARVAblockingReceive();
         getEnvironment().setExternalPerceptions(session.getContent());
         
+        // Antes de seleccionar la misión es necesario actualizar las percepciones
         this.MyReadPerceptions();
         return SelectMission();
     }
     
+    // Elige una misión:
+    // Si solo hay una elige dicha misión
+    // Si hay varias le da la opción al usuario de elegir con un desplegable
     @Override
     protected String chooseMission(){
         Info("Choosing a mission");
@@ -117,6 +141,7 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
         return m;
     }
     
+    // Selecciona una misión. Llama a chooseMission
     public Status SelectMission(){
         String m = chooseMission();
         if (m == null){
@@ -126,6 +151,14 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
         return Status.SOLVEPROBLEM;
     }
     
+    // Obtiene las personas dado un tipo. Este método es necesario para
+    // hacer el LIST de personas
+    /**
+    *
+    * @author Dani Cardenas
+    * @author Alex Herrera
+    * @author David Correa
+    */
     protected Status doQueryPeople(String type){
         Info("Querying people " + type);
         outbox = session.createReply();
@@ -152,19 +185,28 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
             return Status.CLOSEPROBLEM;
         }
         
+        // Obtenemos el objetivo actual. Los objetivos van separados por espacios
+        // por lo que los splitteamos por espacios
         current_goal = getEnvironment().getCurrentGoal().split(" ");
+        
+        // Si el objetivo es movernos, utilizamos en asistente de LARVA
+        // para desplazarnos y se realiza el algoritmo de movimiento
         if (current_goal[0].equals("MOVEIN")){
             outbox = session.createReply();
             outbox.setContent("Request course in " + current_goal[1] + " session " + sessionKey);
             this.LARVAsend(outbox);
             session = this.LARVAblockingReceive();
             getEnvironment().setExternalPerceptions(session.getContent());
-            return MovementGoal();  
+            return MovementGoal();
+            
+        // Si el objetivo es listar, obtenemos la lista de personas dado un tipo
+        // y se avanza al siguiente objetivo
         } else if (current_goal[0].equals("LIST")){
             doQueryPeople(current_goal[1]);
             Info("Goal " + current_goal[0] + " " + current_goal[1] + " " + current_goal[2] + " has been solved!");
             getEnvironment().getCurrentMission().nextGoal();
             return Status.SOLVEPROBLEM;
+        
         } else {
             doReportTypeGoal(current_goal[1]);
             Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!");
@@ -172,7 +214,12 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
             return Status.SOLVEPROBLEM;
         }
     }
-    
+    /**
+    *
+    * @author Dani Cardenas
+    * @author Alex Herrera
+    * @author David Correa
+    */
     protected Status doReportTypeGoal(String type){
         String Report = "REPORT;";
         Iterator it = reportMap.keySet().iterator();
@@ -223,6 +270,36 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
         }
     }
     
+    /**
+    *
+    * @author David Correa
+    */
+    // Cambio en la inteligencia del agente:
+    // - Si el objetivo está a la izquierda, se dirige a la izquierda
+    // - Si el objetivo está a la derecha, se dirige a la derecha
+    @Override
+    public double goAvoid(Environment E, Choice a){
+        if (E.isTargetLeft()){
+            if (a.getName().equals("LEFT")) {
+                nextWhichwall = "RIGHT";
+                nextdistance = E.getDistance();
+                nextPoint = E.getGPS();
+                return Choice.ANY_VALUE;
+            }
+        }
+        else {
+            if (a.getName().equals("RIGHT")) {
+                nextWhichwall = "LEFT";
+                nextdistance = E.getDistance();
+                nextPoint = E.getGPS();
+                return Choice.ANY_VALUE;
+            }
+        }
+        return Choice.MAX_UTILITY;
+    }
+    // Algoritmo del movimiento del agente, es llamado por el bloque de 
+    // código asociado a la accion MOVE
+    // Función iterativa
     public Status MovementGoal(){
         // if (G(E)) {
         //    Info("The problem is over");
@@ -230,6 +307,7 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
         //    return Status.CLOSEPROBLEM;
         //}
         behaviour = AgPlan(E, A);
+        // Si se ha completado el plan se avanza de objetivo
         if (behaviour == null || behaviour.isEmpty()) {
             if (getEnvironment().getCurrentCity().equals(current_goal[1])){
                 Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!");
@@ -238,6 +316,7 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
             }
             Alert("Found no plan to execute");
             return Status.CLOSEPROBLEM;
+        // Si hay acciones por realizar del plan
         } else {// Execute
             Info("Found plan: " + behaviour.toString());
             while (!behaviour.isEmpty()) {
@@ -251,34 +330,14 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
                 }
             }
             this.MyReadPerceptions();
-            return MovementGoal();
+            return MovementGoal();   // función iterativa
         }
     }
     
+    // Antes de cerrar el problema destruimos los NPCs creados previamente
     @Override
     public Status MyCloseProblem(){
         this.doDestroyNPC();
         return super.MyCloseProblem();
-    }
-    
-    @Override
-    public double goAvoid(Environment E, Choice a){
-        if (E.isTargetLeft()){
-            if (a.getName().equals("LEFT")) {
-            nextWhichwall = "RIGHT";
-            nextdistance = E.getDistance();
-            nextPoint = E.getGPS();
-            return Choice.ANY_VALUE;
-            } 
-        }else{
-           if (a.getName().equals("RIGHT")) {
-            nextWhichwall = "LEFT";
-            nextdistance = E.getDistance();
-            nextPoint = E.getGPS();
-            return Choice.ANY_VALUE;
-            }   
-        }
-        
-        return Choice.MAX_UTILITY;
     }
 }
