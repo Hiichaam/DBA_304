@@ -279,7 +279,7 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
     // - Si el objetivo está a la derecha, se dirige a la derecha
     @Override
     public double goAvoid(Environment E, Choice a){
-        if (E.isTargetLeft()){
+        if (E.isTargetLeft() || E.isTargetFrontLeft()){
             if (a.getName().equals("LEFT")) {
                 nextWhichwall = "RIGHT";
                 nextdistance = E.getDistance();
@@ -287,7 +287,7 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
                 return Choice.ANY_VALUE;
             }
         }
-        else {
+        else if(E.isTargetRight() || E.isTargetFrontRight()){
             if (a.getName().equals("RIGHT")) {
                 nextWhichwall = "LEFT";
                 nextdistance = E.getDistance();
