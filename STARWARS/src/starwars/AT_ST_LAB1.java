@@ -272,6 +272,14 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
         }
     }
     
+    /**
+    *
+    * @author Daniel Cardenas
+    */
+    // Cambios en la funcion U para equilibrar la toma de decisiones entre izda y dcha
+    // Se añaden las funciones 4 funciones siguientes que ya estaban implementadas para dcha, ahora para izda -> Equilibramos
+    // Dichas funciones son totalmente simetricas a las definidas en el archivo agente FULL
+    
     @Override
     protected double U(Environment E, Choice a){
         if (whichWall.equals("LEFT")) {
