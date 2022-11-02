@@ -279,21 +279,31 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
     // - Si el objetivo está a la derecha, se dirige a la derecha
     @Override
     public double goAvoid(Environment E, Choice a){
-        if (E.isTargetLeft() || E.isTargetFrontLeft()){
-            if (a.getName().equals("LEFT")) {
-                nextWhichwall = "RIGHT";
-                nextdistance = E.getDistance();
-                nextPoint = E.getGPS();
-                return Choice.ANY_VALUE;
-            }
-        }
-        else if(E.isTargetRight() || E.isTargetFrontRight()){
-            if (a.getName().equals("RIGHT")) {
-                nextWhichwall = "LEFT";
-                nextdistance = E.getDistance();
-                nextPoint = E.getGPS();
-                return Choice.ANY_VALUE;
-            }
+        // Las siguientes lineas de codigo hacen que en el Honor1 el agente se de un buen paseo -> Decidimos dejar el agente con tendencia de giro a la IZDA
+        
+//        if (E.isTargetLeft() || E.isTargetFrontLeft()){
+//            if (a.getName().equals("LEFT")) {
+//                nextWhichwall = "RIGHT";
+//                nextdistance = E.getDistance();
+//                nextPoint = E.getGPS();
+//                return Choice.ANY_VALUE;
+//            }
+//        }
+//        else if(E.isTargetRight() || E.isTargetFrontRight()){
+//            if (a.getName().equals("RIGHT")) {
+//                nextWhichwall = "LEFT";
+//                nextdistance = E.getDistance();
+//                nextPoint = E.getGPS();
+//                return Choice.ANY_VALUE;
+//            }
+//        }
+//        return Choice.MAX_UTILITY;
+
+        if (a.getName().equals("LEFT")) {
+            nextWhichwall = "RIGHT";
+            nextdistance = E.getDistance();
+            nextPoint = E.getGPS();
+            return Choice.ANY_VALUE;
         }
         return Choice.MAX_UTILITY;
     }
