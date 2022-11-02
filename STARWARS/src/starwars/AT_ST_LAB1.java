@@ -204,13 +204,15 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
         } else if (current_goal[0].equals("LIST")){
             doQueryPeople(current_goal[1]);
             Info("Goal " + current_goal[0] + " " + current_goal[1] + " " + current_goal[2] + " has been solved!");
-            getEnvironment().getCurrentMission().nextGoal();
+            //getEnvironment().getCurrentMission().nextGoal();
+            getEnvironment().setNextGoal();
             return Status.SOLVEPROBLEM;
         
         } else {
             doReportTypeGoal(current_goal[1]);
             Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!");
-            getEnvironment().getCurrentMission().nextGoal();
+            //getEnvironment().getCurrentMission().nextGoal();
+            getEnvironment().setNextGoal();
             return Status.SOLVEPROBLEM;
         }
     }
@@ -270,6 +272,56 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
         }
     }
     
+    @Override
+    protected double U(Environment E, Choice a){
+        if (whichWall.equals("LEFT")) {
+            return goFollowWallLeft(E, a);
+        } else if(whichWall.equals("RIGHT")){
+            return goFollowWallRight(E, a);
+        } else if (!E.isFreeFront()) {
+            return goAvoid(E, a);
+        } else {
+            return goAhead(E, a);
+        }
+    }
+    
+    public double goFollowWallRight(Environment E, Choice a) {
+        if (E.isFreeFrontRight()) {
+            return goTurnOnWallRight(E, a);
+        } else if (E.isTargetFrontLeft()
+                && E.isFreeFrontLeft()
+                && E.getDistance() < point.planeDistanceTo(E.getTarget())) {
+            return goStopWallRight(E, a);
+        } else if (E.isFreeFront()) {
+            return goKeepOnWall(E, a);
+        } else {
+            return goRevolveWallRight(E, a);
+        }
+    }
+    
+    public double goTurnOnWallRight(Environment E, Choice a) {
+        if (a.getName().equals("RIGHT")) {
+            return Choice.ANY_VALUE;
+        }
+        return Choice.MAX_UTILITY;
+
+    }
+    
+    public double goRevolveWallRight(Environment E, Choice a) {
+        if (a.getName().equals("LEFT")) {
+            return Choice.ANY_VALUE;
+        }
+        return Choice.MAX_UTILITY;
+    }
+    
+    public double goStopWallRight(Environment E, Choice a) {
+        if (a.getName().equals("LEFT")) {
+            this.resetAutoNAV();
+            return Choice.ANY_VALUE;
+        }
+        return Choice.MAX_UTILITY;
+    }
+    
     /**
     *
     * @author David Correa
@@ -281,31 +333,31 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
     public double goAvoid(Environment E, Choice a){
         // Las siguientes lineas de codigo hacen que en el Honor1 el agente se de un buen paseo -> Decidimos dejar el agente con tendencia de giro a la IZDA
         
-//        if (E.isTargetLeft() || E.isTargetFrontLeft()){
-//            if (a.getName().equals("LEFT")) {
-//                nextWhichwall = "RIGHT";
-//                nextdistance = E.getDistance();
-//                nextPoint = E.getGPS();
-//                return Choice.ANY_VALUE;
-//            }
-//        }
-//        else if(E.isTargetRight() || E.isTargetFrontRight()){
-//            if (a.getName().equals("RIGHT")) {
-//                nextWhichwall = "LEFT";
-//                nextdistance = E.getDistance();
-//                nextPoint = E.getGPS();
-//                return Choice.ANY_VALUE;
-//            }
-//        }
-//        return Choice.MAX_UTILITY;
-
-        if (a.getName().equals("LEFT")) {
-            nextWhichwall = "RIGHT";
-            nextdistance = E.getDistance();
-            nextPoint = E.getGPS();
-            return Choice.ANY_VALUE;
+        if (E.isTargetLeft() || E.isTargetFrontLeft()){
+            if (a.getName().equals("LEFT")) {
+                nextWhichwall = "RIGHT";
+                nextdistance = E.getDistance();
+                nextPoint = E.getGPS();
+                return Choice.ANY_VALUE;
+            }
+        }
+        else if(E.isTargetRight() || E.isTargetFrontRight()){
+            if (a.getName().equals("RIGHT")) {
+                nextWhichwall = "LEFT";
+                nextdistance = E.getDistance();
+                nextPoint = E.getGPS();
+                return Choice.ANY_VALUE;
+            }
         }
         return Choice.MAX_UTILITY;
+
+        //if (a.getName().equals("LEFT")) {
+        //    nextWhichwall = "RIGHT";
+        //    nextdistance = E.getDistance();
+        //    nextPoint = E.getGPS();
+        //    return Choice.ANY_VALUE;
+        //}
+        //return Choice.MAX_UTILITY;
     }
     // Algoritmo del movimiento del agente, es llamado por el bloque de 
     // código asociado a la accion MOVE
@@ -321,7 +373,8 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
         if (behaviour == null || behaviour.isEmpty()) {
             if (getEnvironment().getCurrentCity().equals(current_goal[1])){
                 Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!");
-                getEnvironment().getCurrentMission().nextGoal();
+                //getEnvironment().getCurrentMission().nextGoal();
+                getEnvironment().setNextGoal();
                 return Status.SOLVEPROBLEM;
             }
             Alert("Found no plan to execute");
