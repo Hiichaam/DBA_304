@@ -192,13 +192,19 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
         // Si el objetivo es movernos, utilizamos en asistente de LARVA
         // para desplazarnos y se realiza el algoritmo de movimiento
         if (current_goal[0].equals("MOVEIN")){
-            outbox = session.createReply();
-            outbox.setContent("Request course in " + current_goal[1] + " session " + sessionKey);
-            this.LARVAsend(outbox);
-            session = this.LARVAblockingReceive();
-            getEnvironment().setExternalPerceptions(session.getContent());
-            return MovementGoal();
-            
+            if (!getEnvironment().getCurrentCity().equals(current_goal[1])){
+                outbox = session.createReply();
+                outbox.setContent("Request course in " + current_goal[1] + " session " + sessionKey);
+                this.LARVAsend(outbox);
+                session = this.LARVAblockingReceive();
+                getEnvironment().setExternalPerceptions(session.getContent());
+                return MovementGoal();
+            } else {
+                Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!");
+                //getEnvironment().getCurrentMission().nextGoal();
+                getEnvironment().setNextGoal();
+                return Status.SOLVEPROBLEM;
+            }  
         // Si el objetivo es listar, obtenemos la lista de personas dado un tipo
         // y se avanza al siguiente objetivo
         } else if (current_goal[0].equals("LIST")){
