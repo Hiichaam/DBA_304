@@ -14,7 +14,8 @@ public class main {
     public static void main(String[] args) {
         LARVABoot boot = new LARVABoot();
         boot.Boot("isg2.ugr.es",1099);
-        boot.launchAgent("DaniCardenas-"+getHexaKey(4), AT_ST_LAB1.class);
-        boot.WaitToShutDown();    }
+        boot.launchAgent("HICHAM", AT_ST_LAB1.class);
+        boot.WaitToShutDown();
+    }
     
 }
