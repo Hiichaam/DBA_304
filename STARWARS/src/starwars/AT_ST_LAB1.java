@@ -107,7 +107,7 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
         
         // Ejecutar los NPCs
         this.doPrepareNPC(1, DEST.class);
-        //this.doPrepareNPC(2, BB1F.class);
+        this.doPrepareNPC(4, BB1F.class);//n es el numero de veces que se lanza
         //this.doPrepareNPC(0, YV.class);
         //this.doPrepareNPC(0, MTT.class);
 
