@@ -142,6 +142,59 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         return SelectMission();
     }
     
+    @Override
+    public Status myAssistedNavigation(int goalx, int goaly) {
+        Info("Requesting course to " + goalx + " " + goaly);
+        outbox = session.createReply();
+        
+        outbox.setContent("Request course to " + goalx + " " + goaly + " Session " + sessionKey);
+        
+        outbox.setConversationId(sessionKey);
+        outbox.setPerformative(ACLMessage.REQUEST);
+        
+        this.LARVAsend(outbox);
+        session = this.LARVAblockingReceive();
+        getEnvironment().setExternalPerceptions(session.getContent());
+        return Status.CHECKIN.SOLVEPROBLEM;
+    }
+    
+    @Override
+    public boolean MyExecuteAction (String action){
+        Info("Executing action " + action);
+        outbox = session.createReply();
+        outbox.setContent("Request execute " + action + " session " + sessionKey);
+        
+        outbox.setConversationId(sessionKey);
+        outbox.setPerformative(ACLMessage.REQUEST);
+        this.LARVAsend(outbox);
+        session = this.LARVAblockingReceive();
+        
+        if (!session.getContent().startsWith("Inform")){
+            Error("Unable to execute action " + action + " due to " + session.getContent());
+            return false;
+        }
+        return true;
+    }
+    
+    public boolean MyReadPerceptions (){
+        Info("Reading perceptions...");
+        outbox = session.createReply();
+        outbox.setContent("Query sensors session " + sessionKey);
+        
+        outbox.setConversationId(sessionKey);
+        outbox.setPerformative(ACLMessage.QUERY_REF);
+        this.LARVAsend(outbox);
+        session = this.LARVAblockingReceive();
+        
+        if (session.getContent().startsWith("Failure")){
+            Error("Unable to read perceptions due to " + session.getContent());
+            return false;
+        }
+        this.getEnvironment().setExternalPerceptions(session.getContent());
+        //Info(this.easyPrintPerceptions());
+        return true;
+    }
+    
     
     
     @Override
