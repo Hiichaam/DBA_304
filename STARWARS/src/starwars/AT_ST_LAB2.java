@@ -300,7 +300,7 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
     }
     
     public void EnergyRecharge() {
-        
+        int numMessage = 0;
         Info("Recharging...");
         ArrayList<String> providers = this.DFGetAllProvidersOf("TYPE BB1F");
         ArrayList<Integer> distances = new ArrayList<Integer>();
@@ -334,31 +334,9 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         for(Integer i = 0; i < map.size(); i++) {
           providers.add(map.get(distances.get(i)));
         }*/
-        String receiverAgent = "";
-        boolean rechargeFound = false;
-        while (!rechargeFound){
-            for(String provider: providers){
-                if(this.DFHasService(provider, sessionKey)){
-                    receiverAgent = provider;
-                }
-            }
+        
             
-            outbox = new ACLMessage();
-            outbox.setSender(getAID());
-            outbox.addReceiver(new AID(receiverAgent, AID.ISLOCALNAME));
-            outbox.setPerformative(ACLMessage.REQUEST);
-            outbox.setProtocol("DROIDSHIP");
-            outbox.setConversationId(sessionKey);
-            outbox.setContent("REFILL");
-            this.LARVAsend(outbox);
-            session = LARVAblockingReceive();
-            if (session.getContent().split(" ")[0].toUpperCase().equals("AGREE")){
-                rechargeFound = true;
-                break;
-            }
-        }
-            
-        /*
+        
         
         boolean rechargeFound = false;
         while (!rechargeFound){
@@ -370,14 +348,36 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
                 outbox.setProtocol("DROIDSHIP");
                 outbox.setConversationId(sessionKey);
                 outbox.setContent("REFILL");
+                outbox.setReplyWith(String.valueOf(numMessage));
+                numMessage ++;
                 this.LARVAsend(outbox);
                 session = LARVAblockingReceive();
                 if (session.getContent().split(" ")[0].toUpperCase().equals("AGREE")){
                     rechargeFound = true;
                     break;
-                }  
+                }
+                /*if (inbox == null) {
+                    outbox = new ACLMessage();
+                    outbox.setSender(getAID());
+                    outbox.addReceiver(new AID(provider, AID.ISLOCALNAME));
+                    outbox.setPerformative(ACLMessage.REQUEST);
+                    outbox.setProtocol("DROIDSHIP");
+                    outbox.setConversationId(sessionKey);
+                } else { // Else folllow the dialogue
+                    outbox = inbox.createReply();
+                }
+                // Complete the context of the dialogue
+                outbox.setContent("REFILL");
+                outbox.setReplyWith(String.valueOf(numMessage));
+                this.LARVAsend(outbox);
+                session = LARVAblockingReceive();
+                if (session.getContent().split(" ")[0].toUpperCase().equals("AGREE")){
+                    rechargeFound = true;
+                    break;
+                }*/
+                
             }
-        }*/
+        }
         
         //Esta parte de larva no esta documentada y no tengo ni idea de como usar esto, creo que es algo asi, pero no puedo ver el constructor de MatchExpression 
         /*var t = new ACLMessage();
@@ -389,6 +389,8 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         //Habria que hacerlo con lo que hay arriba comentado, esto es una alternativa, ya vemos luego con cual nos quedamos.
         boolean rechaged = false;
         while(!rechaged){
+            outbox.setReplyWith(String.valueOf(numMessage));
+            numMessage ++;
             session = LARVAblockingReceive();
             if(session.getPerformative() == ACLMessage.INFORM)
                 rechaged = true;
@@ -399,6 +401,7 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
     }
     
     public AT_ST_FULL.Status MovementGoal(){
+        boolean racharged = false;
         behaviour = AgPlan(E, A);
         // Si se ha completado el plan se avanza de objetivo
         if (behaviour == null || behaviour.isEmpty()) {
@@ -418,8 +421,10 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
                 behaviour.remove(0);
                 Info("Excuting " + a);
                 this.MyExecuteAction(a.getName());
-                if(getEnvironment().getEnergy() < 700)
+                if(getEnvironment().getEnergy() < 850 && !racharged){
                     EnergyRecharge();
+                    racharged = true;
+                }
                 
                 if (!Ve(E)) {
                     this.Error("The agent is not alive: " + E.getStatus());
