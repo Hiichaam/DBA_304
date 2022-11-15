@@ -13,6 +13,7 @@ import agents.LARVAFirstAgent;
 import agents.MTT;
 import agents.YV;
 import ai.Choice;
+import ai.Plan;
 import geometry.Point3D;
 import glossary.Sensors;
 import jade.core.AID;
@@ -305,7 +306,7 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         ArrayList<Integer> distances = new ArrayList<Integer>();
         
         //Esto es para ordenar los providers por cercania
-        for(var provider : providers){
+        /*for(var provider : providers){
             outbox = new ACLMessage();
             outbox.setSender(getAID());
             outbox.addReceiver(new AID(provider, AID.ISLOCALNAME));
@@ -332,7 +333,32 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
 
         for(Integer i = 0; i < map.size(); i++) {
           providers.add(map.get(distances.get(i)));
+        }*/
+        String receiverAgent = "";
+        boolean rechargeFound = false;
+        while (!rechargeFound){
+            for(String provider: providers){
+                if(this.DFHasService(provider, sessionKey)){
+                    receiverAgent = provider;
+                }
+            }
+            
+            outbox = new ACLMessage();
+            outbox.setSender(getAID());
+            outbox.addReceiver(new AID(receiverAgent, AID.ISLOCALNAME));
+            outbox.setPerformative(ACLMessage.REQUEST);
+            outbox.setProtocol("DROIDSHIP");
+            outbox.setConversationId(sessionKey);
+            outbox.setContent("REFILL");
+            this.LARVAsend(outbox);
+            session = LARVAblockingReceive();
+            if (session.getContent().split(" ")[0].toUpperCase().equals("AGREE")){
+                rechargeFound = true;
+                break;
+            }
         }
+            
+        /*
         
         boolean rechargeFound = false;
         while (!rechargeFound){
@@ -351,7 +377,7 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
                     break;
                 }  
             }
-        }
+        }*/
         
         //Esta parte de larva no esta documentada y no tengo ni idea de como usar esto, creo que es algo asi, pero no puedo ver el constructor de MatchExpression 
         /*var t = new ACLMessage();
@@ -392,7 +418,7 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
                 behaviour.remove(0);
                 Info("Excuting " + a);
                 this.MyExecuteAction(a.getName());
-                if(E.isEnergyExhausted())
+                if(getEnvironment().getEnergy() < 700)
                     EnergyRecharge();
                 
                 if (!Ve(E)) {
@@ -405,12 +431,38 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         }
     }
     
+    /*@Override
+    protected Plan AgPlan(Environment E, DecisionSet A) {
+        Plan result;
+        Ei = E.clone();
+        Plan p = new Plan();
+        for (int i = 0; i < Ei.getRange() / 2 - 2; i++) {
+            Ei.cache();
+            if (!Ve(Ei)) {
+                return null;
+            } else if (G(Ei)) {
+                return p;
+            } else {
+                a = Ag(Ei, A);
+                if (a != null) {
+                    p.add(a);
+                    Ef = S(Ei, a);
+                    Ei = Ef;
+                } else {
+                    return null;
+                }
+            }
+        }
+        return p;
+    }*/
+    
     /**
     *
     * @author Hicham
     */
     
     protected AT_ST_FULL.Status doCapture(String  nCaptures, String type){
+        int i = 0;
         int numCaptures = Integer.parseInt(nCaptures);
         Info("Capturing" + nCaptures + " people " + type);
         
@@ -436,14 +488,14 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         }
         
         Map<Integer, String> map = new HashMap<Integer, String>();
-        for(Integer i = 0; i < providers.size(); i++) {
+        for( i = 0; i < providers.size(); i++) {
           map.put(distances.get(i),providers.get(i)); 
         }
 
         Collections.sort(distances);
         providers.clear();
 
-        for(Integer i = 0; i < map.size(); i++) {
+        for( i = 0; i < map.size(); i++) {
           providers.add(map.get(distances.get(i)));
         }
         
@@ -474,25 +526,26 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
             
         }
         
-        for (int i = 0; i < numCaptures ; i ++){
+        while (i < numCaptures){
             outbox = session.createReply();
-            outbox.setContent("Request capture ");
+            outbox.setContent("Request capture " + type.toUpperCase() + " session " + sessionKey);
             
-            // Añadido por David. Borra el comment cuando lo veas Hicham jajaj
             outbox.setPerformative(ACLMessage.REQUEST);
             outbox.setConversationId(sessionKey);
-            /////////////////////////////////////////////
             this.LARVAsend(outbox);
             session = LARVAblockingReceive();
-        
+            if(session.getPerformative() == ACLMessage.INFORM)
+                ++ i;
+            
         }
         
         
         return myStatus;
         
-        
              
     }
+    
+    
 
     
     
