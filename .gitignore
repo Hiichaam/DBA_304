@@ -2,3 +2,4 @@
 *.class
 STARWARS/config/Configuration.conf
 STARWARS/.idea/
+*.seqd
