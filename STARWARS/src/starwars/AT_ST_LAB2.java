@@ -30,7 +30,8 @@ import java.util.Map;
  * @author dcardenas11
  */
 public class AT_ST_LAB2 extends AT_ST_LAB1{
-    
+
+
     // Igual que en los agentes anteriores, excepto:
     // Cambio en las performativas
     @Override
@@ -176,7 +177,8 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         }
         return true;
     }
-    
+
+    @Override
     public boolean MyReadPerceptions (){
         Info("Reading perceptions...");
         outbox = session.createReply();
@@ -351,8 +353,11 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
                 outbox.setReplyWith(String.valueOf(numMessage));
                 numMessage ++;
                 this.LARVAsend(outbox);
+
                 session = LARVAblockingReceive();
-                if (session.getContent().split(" ")[0].toUpperCase().equals("AGREE")){
+                Info("================\n" + session.getContent());
+                if (session.getPerformative()==ACLMessage.AGREE){
+                    Info("Agree recibido");
                     rechargeFound = true;
                     break;
                 }
@@ -389,13 +394,14 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         //Habria que hacerlo con lo que hay arriba comentado, esto es una alternativa, ya vemos luego con cual nos quedamos.
         boolean rechaged = false;
         while(!rechaged){
-            outbox.setReplyWith(String.valueOf(numMessage));
-            numMessage ++;
+            /*outbox.setReplyWith(String.valueOf(numMessage));
+            numMessage ++;*/
             session = LARVAblockingReceive();
             if(session.getPerformative() == ACLMessage.INFORM)
                 rechaged = true;
         }
-        
+        Info("Antes del readmy");
+
         this.MyReadPerceptions();
         Info("Rechage completed");
     }
