@@ -32,6 +32,11 @@ import java.util.Map;
  */
 public class AT_ST_LAB2 extends AT_ST_LAB1{
 
+    String destCity = "";
+    String destProvider = "";
+    int EnergyLimitToAskRecharge = 15;
+    ACLMessage mtt, bb1f;
+    
     @Override
     public boolean MyReadPerceptions (){
         Info("Reading perceptions...");
@@ -96,8 +101,8 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
           providers.add(map.get(distances.get(i)));
         }*/
 
-        boolean rechargeFound = false;
-        while (!rechargeFound){
+        boolean rechargeAgentFound = false;
+        while (!rechargeAgentFound){
             for(String provider: providers){
                 outbox = new ACLMessage();
                 outbox.setSender(getAID());
@@ -110,9 +115,9 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
                 numMessage ++;
                 this.LARVAsend(outbox);
 
-                session = LARVAblockingReceive();
-                if (session.getPerformative()==ACLMessage.AGREE){
-                    rechargeFound = true;
+                bb1f = LARVAblockingReceive();
+                if (bb1f.getPerformative()==ACLMessage.AGREE){
+                    rechargeAgentFound = true;
                     break;
                 }
             }
@@ -125,13 +130,13 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
 
 
         //Habria que hacerlo con lo que hay arriba comentado, esto es una alternativa, ya vemos luego con cual nos quedamos.
-        boolean rechaged = false;
-        while(!rechaged){
-            session = LARVAblockingReceive();
-            if(session.getPerformative() == ACLMessage.INFORM)
-                rechaged = true;
+        boolean chargeDone = false;
+        while(!chargeDone){
+            bb1f = LARVAblockingReceive();
+            if(bb1f.getPerformative() == ACLMessage.INFORM)
+                chargeDone = true;
         }
-        session = perceptions_session;
+        //session = perceptions_session;
         this.MyReadPerceptions();
         Info("Rechage completed");
     }
@@ -150,7 +155,7 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         ArrayList<Integer> distances = new ArrayList<Integer>();
 
         //Esto es para ordenar los providers por cercania
-        for(var provider : providers){
+        /*for(var provider : providers){
             outbox = new ACLMessage();
             outbox.setSender(getAID());
             outbox.addReceiver(new AID(provider, AID.ISLOCALNAME));
@@ -177,8 +182,9 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
 
         for( i = 0; i < map.size(); i++) {
             providers.add(map.get(distances.get(i)));
-        }
-
+        }*/
+        
+        int numMessage = 0;
         boolean mttFound = false;
         while (!mttFound){
             for(String provider: providers){
@@ -189,42 +195,55 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
                 outbox.setProtocol("DROIDSHIP");
                 outbox.setConversationId(sessionKey);
                 outbox.setContent("BACKUP");
+                outbox.setReplyWith(String.valueOf(numMessage));
+                numMessage ++;
                 this.LARVAsend(outbox);
-                session = LARVAblockingReceive();
-                if (session.getContent().split(" ")[0].toUpperCase().equals("AGREE")){
+
+                mtt = LARVAblockingReceive();
+                if (mtt.getPerformative()==ACLMessage.AGREE){
                     mttFound = true;
                     break;
                 }
             }
         }
 
-        boolean startCaprure = false;
-        while(!startCaprure){
-            session = LARVAblockingReceive();
-            if(session.getPerformative() == ACLMessage.INFORM)
-                startCaprure = true;
-
+        boolean backupHasArrived = false;
+        while(!backupHasArrived){
+            mtt = LARVAblockingReceive();
+            if(mtt.getPerformative() == ACLMessage.INFORM)
+                backupHasArrived = true;
         }
 
+        String[] peopleNames = queryPeopleName(type);
         while (i < numCaptures){
             outbox = session.createReply();
-            outbox.setContent("Request capture " + type.toUpperCase() + " session " + sessionKey);
+            outbox.setContent("Request capture " + peopleNames[i] + " session " + sessionKey);
 
             outbox.setPerformative(ACLMessage.REQUEST);
             outbox.setConversationId(sessionKey);
             this.LARVAsend(outbox);
             session = LARVAblockingReceive();
+            
             if(session.getPerformative() == ACLMessage.INFORM)
-                ++ i;
-
+                ++i;
         }
 
-
         return myStatus;
-
-
     }
-
+    
+    protected String[] queryPeopleName(String type){
+        Info("Querying people " + type);
+        outbox = session.createReply();
+        outbox.setContent("Query " + type.toUpperCase() + " session " + sessionKey);
+        outbox.setPerformative(ACLMessage.QUERY_REF);
+        outbox.setConversationId(sessionKey);
+        this.LARVAsend(outbox);
+        session = LARVAblockingReceive();
+        getEnvironment().setExternalPerceptions(session.getContent());
+        Message("Found " + getEnvironment().getPeople().length + " " + type + " in " + getEnvironment().getCurrentCity());
+        return this.getEnvironment().getPeople();
+    }
+    
     // Igual que en los agentes anteriores, excepto:
     // Cambio en las performativas
     @Override
@@ -317,7 +336,7 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         this.doPrepareNPC(1, DEST.class);
         this.doPrepareNPC(4, BB1F.class);//n es el numero de veces que se lanza
         //this.doPrepareNPC(0, YV.class);
-        //this.doPrepareNPC(0, MTT.class);
+        this.doPrepareNPC(3, MTT.class);
 
         outbox = session.createReply();
         
@@ -382,7 +401,7 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         // Obtenemos el objetivo actual. Los objetivos van separados por espacios
         // por lo que los splitteamos por espacios
         current_goal = getEnvironment().getCurrentGoal().split(" ");
-        
+  
         // Si el objetivo es movernos, utilizamos en asistente de LARVA
         // para desplazarnos y se realiza el algoritmo de movimiento
         if (current_goal[0].equals("MOVEIN")){
@@ -397,41 +416,103 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
                 this.LARVAsend(outbox);
                 session = this.LARVAblockingReceive();
                 getEnvironment().setExternalPerceptions(session.getContent());
-                return MovementGoal();
+                return MovementGoal("");
             } else {
                 Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!");
                 //getEnvironment().getCurrentMission().nextGoal();
                 getEnvironment().setNextGoal();
-                return AT_ST_FULL.Status.SOLVEPROBLEM;
+                return Status.SOLVEPROBLEM;
             }  
         // Si el objetivo es listar, obtenemos la lista de personas dado un tipo
         // y se avanza al siguiente objetivo
-        } /*else if (current_goal[0].equals("LIST")){
+        } else if (current_goal[0].equals("LIST")){
             doQueryPeople(current_goal[1]);
             Info("Goal " + current_goal[0] + " " + current_goal[1] + " " + current_goal[2] + " has been solved!");
-            //getEnvironment().getCurrentMission().nextGoal();
             getEnvironment().setNextGoal();
             return Status.SOLVEPROBLEM;
-        
-        }*/ else if (current_goal[0].equals("REPORT")){
+        } else if (current_goal[0].equals("REPORT")){
             doReportTypeGoal(current_goal[1]);
             Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!");
-            //getEnvironment().getCurrentMission().nextGoal();
             getEnvironment().setNextGoal();
-            return AT_ST_FULL.Status.SOLVEPROBLEM;
+            return Status.SOLVEPROBLEM;
         } else if (current_goal[0].equals("CAPTURE")){
             doCapture(current_goal[1], current_goal[2]);
+            Info("Goal " + this.getEnvironment().getCurrentGoal() + " has been solved!");
             getEnvironment().setNextGoal();
-            return AT_ST_FULL.Status.SOLVEPROBLEM;
+            return Status.SOLVEPROBLEM;
         } else if (current_goal[0].equals("MOVEBY")){
-            return AT_ST_FULL.Status.SOLVEPROBLEM;
+            if (destCity.equals("")){
+                destCity = getMoveByCity(current_goal[1]);
+                return MovementGoal(destCity);
+            } else {
+                Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!");
+                getEnvironment().setNextGoal();
+                return Status.SOLVEPROBLEM;
+            }
         } else if (current_goal[0].equals("TRANSFER")){
-            return AT_ST_FULL.Status.SOLVEPROBLEM;            
+            doTransfer(current_goal[1], current_goal[2]);
+            Info("Goal " + this.getEnvironment().getCurrentGoal() + " has been solved!");
+            getEnvironment().setNextGoal();
+            return Status.SOLVEPROBLEM;            
         }
         
-        return AT_ST_FULL.Status.EXIT;
+        return Status.EXIT;
     }
     
+    public String getMoveByCity(String droidship){
+        ArrayList<String> destProviders = this.DFGetAllProvidersOf("TYPE " + droidship);
+
+        for(String provider: destProviders){
+            if(this.DFHasService(destProvider, sessionKey)){
+                destProvider = provider;
+            }
+        }
+        
+        outbox = new ACLMessage();
+        outbox.setSender(getAID());
+        outbox.addReceiver(new AID(destProvider, AID.ISLOCALNAME));
+        outbox.setPerformative(ACLMessage.QUERY_REF);
+        outbox.setContent("TRANSPONDER");
+        this.LARVAsend(outbox);
+        session = LARVAblockingReceive();
+
+        contentTokens = session.getContent().split(";");
+        String destCity = contentTokens[3];
+        //coordinates = coordinates.replace(coordinates, "");
+
+        outbox = session.createReply();
+        outbox.setContent("Request course in " + destCity + " session " + sessionKey);
+        outbox.setPerformative(ACLMessage.REQUEST);
+        outbox.setConversationId(sessionKey);
+        this.LARVAsend(outbox);
+        session = this.LARVAblockingReceive();
+        getEnvironment().setExternalPerceptions(session.getContent());
+        return destCity;
+    }
+    
+    public Status doTransfer(String n, String type){
+        int peopleToTransfer = Integer.valueOf(n);
+        while(peopleToTransfer > 0){
+                outbox = new ACLMessage();
+                outbox.setSender(getAID());
+                outbox.addReceiver(new AID(destProvider, AID.ISLOCALNAME));
+                outbox.setPerformative(ACLMessage.REQUEST);
+                outbox.setProtocol("DROIDSHIP");
+                outbox.setConversationId(sessionKey);	
+                outbox.setContent("TRANSFER " + current_goal[2]);
+                this.LARVAsend(outbox);
+
+                session = LARVAblockingReceive();
+
+                Info("================\n" + session.getContent());
+                if (session.getPerformative()==ACLMessage.AGREE){
+                        Info("Agree recibido");
+                        peopleToTransfer -= 1;
+                }
+        }
+        
+        return myStatus;
+    }
     // Antes de cerrar el problema destruimos los NPCs creados previamente
     // Añadido performativas
     @Override
@@ -472,17 +553,23 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         return res;
     }
 
-    public AT_ST_FULL.Status MovementGoal(){
-        boolean racharged = false;
+    public AT_ST_FULL.Status MovementGoal(String city){
         behaviour = AgPlan(E, A);
         // Si se ha completado el plan se avanza de objetivo
         if (behaviour == null || behaviour.isEmpty()) {
-            if (getEnvironment().getCurrentCity().equals(current_goal[1])){
-                Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!");
-                //getEnvironment().getCurrentMission().nextGoal();
-                getEnvironment().setNextGoal();
-                return AT_ST_FULL.Status.SOLVEPROBLEM;
-            }
+            if ("MOVEIN".equals(current_goal[0])){
+                if (getEnvironment().getCurrentCity().equals(current_goal[1])){
+                    Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!");
+                    getEnvironment().setNextGoal();
+                    return AT_ST_FULL.Status.SOLVEPROBLEM;
+                }
+	    } else { // "MOVEBY <droidship>".equals(current_goal)
+	    	if (getEnvironment().getCurrentCity().equals(city)){
+                    Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!");
+                    getEnvironment().setNextGoal();
+                    return AT_ST_FULL.Status.SOLVEPROBLEM;
+                }
+	    }
             Alert("Found no plan to execute");
             return AT_ST_FULL.Status.CLOSEPROBLEM;
         // Si hay acciones por realizar del plan
@@ -493,17 +580,16 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
                 behaviour.remove(0);
                 Info("Excuting " + a);
                 this.MyExecuteAction(a.getName());
-                if(getEnvironment().getEnergy() < 15){
+                if(getEnvironment().getEnergy() < EnergyLimitToAskRecharge){
                     EnergyRecharge();
                 }
-                
                 if (!Ve(E)) {
                     this.Error("The agent is not alive: " + E.getStatus());
                     return AT_ST_FULL.Status.CLOSEPROBLEM;
                 }
             }
             this.MyReadPerceptions();
-            return MovementGoal();   // función iterativa
+            return MovementGoal(city);   // función iterativa
         }
     }
 

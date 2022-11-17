@@ -39,7 +39,7 @@ public class AT_ST_FULL extends LARVAFirstAgent{
             preplan="",
             content, // Content of messages
             sessionKey; // The key for each work session 
-    String[] problems = new String[]{"Wobani.Apr1","Wobani.Not1","Wobani.Sob1","Wobani.Hon1","Endor.Sob1"};
+    String[] problems = new String[]{"Wobani.Apr1","Wobani.Not1","Wobani.Sob1","Wobani.Hon1"};
     int iplan = 0, myEnergy = 0;
     boolean showPerceptions = false;
     ACLMessage open, session; // Backup of relevant messages
