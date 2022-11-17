@@ -34,8 +34,9 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
 
     String destCity = "";
     String destProvider = "";
-    int EnergyLimitToAskRecharge = 15;
-    ACLMessage mtt, bb1f;
+    String[] peopleNames;
+    int EnergyLimitToAskRecharge = 20 ;
+    ACLMessage mtt, bb1f, transfer;
     
     @Override
     public boolean MyReadPerceptions (){
@@ -60,7 +61,7 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
     public void EnergyRecharge() {
         int numMessage = 0;
         ACLMessage perceptions_session;
-        perceptions_session = session;
+        //perceptions_session = session;
         Info("Recharging...");
         ArrayList<String> Globalproviders = this.DFGetAllProvidersOf("TYPE BB1F");
         ArrayList<String> providers = new ArrayList<String>();
@@ -119,6 +120,8 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
                 if (bb1f.getPerformative()==ACLMessage.AGREE){
                     rechargeAgentFound = true;
                     break;
+                }else if (bb1f.getPerformative()==ACLMessage.REFUSE){
+                        bb1f = LARVAblockingReceive();
                 }
             }
         }
@@ -149,9 +152,18 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
     protected AT_ST_FULL.Status doCapture(String  nCaptures, String type){
         int i = 0;
         int numCaptures = Integer.parseInt(nCaptures);
-        Info("Capturing" + nCaptures + " people " + type);
+        Info("Capturing " + nCaptures + " people " + type);
 
-        ArrayList<String> providers = this.DFGetAllProvidersOf("TYPE MTT");
+        /*ArrayList<String> providers = this.DFGetAllProvidersOf("TYPE MTT");
+        ArrayList<Integer> distances = new ArrayList<Integer>();*/
+        
+        ArrayList<String> Globalproviders = this.DFGetAllProvidersOf("TYPE MTT");
+        ArrayList<String> providers = new ArrayList<String>();
+        for(var provider : Globalproviders) {
+            if (this.DFHasService(provider, sessionKey)) {
+                providers.add(provider);
+            }
+        }
         ArrayList<Integer> distances = new ArrayList<Integer>();
 
         //Esto es para ordenar los providers por cercania
@@ -201,20 +213,26 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
 
                 mtt = LARVAblockingReceive();
                 if (mtt.getPerformative()==ACLMessage.AGREE){
+                    Info(" YAAAA VOOOY " );
+                    //mttProvider = provider;
                     mttFound = true;
                     break;
+                }else if (mtt.getPerformative()==ACLMessage.REFUSE){
+                        mtt = LARVAblockingReceive();
                 }
             }
         }
 
         boolean backupHasArrived = false;
         while(!backupHasArrived){
+            Info(" estoy dentro " );
             mtt = LARVAblockingReceive();
             if(mtt.getPerformative() == ACLMessage.INFORM)
                 backupHasArrived = true;
+            
         }
 
-        String[] peopleNames = queryPeopleName(type);
+        peopleNames = queryPeopleName(type);
         while (i < numCaptures){
             outbox = session.createReply();
             outbox.setContent("Request capture " + peopleNames[i] + " session " + sessionKey);
@@ -227,7 +245,96 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
             if(session.getPerformative() == ACLMessage.INFORM)
                 ++i;
         }
+        
+        
+        outbox = mtt.createReply();
+        
+        outbox.setPerformative(ACLMessage.CANCEL);
+        outbox.setContent("");
+        outbox.setProtocol("DROIDSHIP");
+        outbox.setConversationId(sessionKey);
+        //outbox.setContent(this.Transponder());
+        //outbox.setConversationId(sessionKey);
+        this.LARVAsend(outbox);
+        //mtt = LARVAblockingReceive();
 
+        return myStatus;
+    }
+    
+   public String getMoveByCity(String droidship){
+        Info("obteniendo dest");
+        ArrayList<String> destProviders = this.DFGetAllProvidersOf("TYPE " + droidship.toUpperCase());
+
+        for(String provider: destProviders){
+            if(this.DFHasService(destProvider, sessionKey)){
+                destProvider = provider;
+            }
+        }
+        
+        outbox = new ACLMessage();
+        outbox.setSender(getAID());
+        outbox.addReceiver(new AID(destProvider, AID.ISLOCALNAME));
+        outbox.setPerformative(ACLMessage.QUERY_REF);
+        outbox.setProtocol("DROIDSHIP");
+        outbox.setConversationId(sessionKey);
+        outbox.setContent("TRANSPONDER");
+        this.LARVAsend(outbox);
+        transfer = LARVAblockingReceive();  
+      
+        contentTokens = transfer.getContent().split(";");
+        String destCity = contentTokens[3];
+        //coordinates = coordinates.replace(coordinates, "");
+
+        outbox = session.createReply();
+        outbox.setContent("Request course in " + destCity + " session " + sessionKey);
+        outbox.setPerformative(ACLMessage.REQUEST);
+        outbox.setConversationId(sessionKey);
+        this.LARVAsend(outbox);
+        session = this.LARVAblockingReceive();
+        getEnvironment().setExternalPerceptions(session.getContent());
+        Info("dest obtenido");
+        return destCity;
+        
+        
+    }
+    
+    public Status doTransfer(String n, String type){
+        int peopleToTransfer = Integer.valueOf(n);
+        Info("transfer\n" );
+        while(peopleToTransfer > 0){
+            if (transfer == null) {
+                outbox = new ACLMessage();
+                outbox.setSender(getAID());
+                outbox.addReceiver(new AID(destProvider, AID.ISLOCALNAME));
+                outbox.setPerformative(ACLMessage.REQUEST);
+                outbox.setProtocol("DROIDSHIP");
+                outbox.setConversationId(sessionKey);	
+                //outbox.setContent("TRANSFER " + peopleNames[peopleToTransfer-1]);
+            } else { // Else folllow the dialogue
+                outbox = transfer.createReply();
+            }
+                /*outbox = new ACLMessage();
+                outbox.setSender(getAID());
+                outbox.addReceiver(new AID(destProvider, AID.ISLOCALNAME));
+                outbox.setPerformative(ACLMessage.REQUEST);
+                outbox.setProtocol("DROIDSHIP");
+                outbox.setConversationId(sessionKey);	
+                outbox.setContent("TRANSFER " + peopleNames[peopleToTransfer-1]);
+                this.LARVAsend(outbox);*/
+                outbox.setProtocol("DROIDSHIP");
+                outbox.setConversationId(sessionKey);
+                outbox.setContent("TRANSFER " + peopleNames[peopleToTransfer-1]);
+                outbox.setReplyWith(peopleNames[peopleToTransfer-1]);
+                this.LARVAsend(outbox);
+                transfer = LARVAblockingReceive();
+
+                Info("================\n" + transfer.getContent());
+                if (transfer.getPerformative()==ACLMessage.INFORM){
+                        Info("Transferido" + peopleNames[peopleToTransfer-1]);
+                        peopleToTransfer -= 1;
+                }
+        }
+        
         return myStatus;
     }
     
@@ -459,60 +566,9 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         return Status.EXIT;
     }
     
-    public String getMoveByCity(String droidship){
-        ArrayList<String> destProviders = this.DFGetAllProvidersOf("TYPE " + droidship);
-
-        for(String provider: destProviders){
-            if(this.DFHasService(destProvider, sessionKey)){
-                destProvider = provider;
-            }
-        }
-        
-        outbox = new ACLMessage();
-        outbox.setSender(getAID());
-        outbox.addReceiver(new AID(destProvider, AID.ISLOCALNAME));
-        outbox.setPerformative(ACLMessage.QUERY_REF);
-        outbox.setContent("TRANSPONDER");
-        this.LARVAsend(outbox);
-        session = LARVAblockingReceive();
-
-        contentTokens = session.getContent().split(";");
-        String destCity = contentTokens[3];
-        //coordinates = coordinates.replace(coordinates, "");
-
-        outbox = session.createReply();
-        outbox.setContent("Request course in " + destCity + " session " + sessionKey);
-        outbox.setPerformative(ACLMessage.REQUEST);
-        outbox.setConversationId(sessionKey);
-        this.LARVAsend(outbox);
-        session = this.LARVAblockingReceive();
-        getEnvironment().setExternalPerceptions(session.getContent());
-        return destCity;
-    }
     
-    public Status doTransfer(String n, String type){
-        int peopleToTransfer = Integer.valueOf(n);
-        while(peopleToTransfer > 0){
-                outbox = new ACLMessage();
-                outbox.setSender(getAID());
-                outbox.addReceiver(new AID(destProvider, AID.ISLOCALNAME));
-                outbox.setPerformative(ACLMessage.REQUEST);
-                outbox.setProtocol("DROIDSHIP");
-                outbox.setConversationId(sessionKey);	
-                outbox.setContent("TRANSFER " + current_goal[2]);
-                this.LARVAsend(outbox);
-
-                session = LARVAblockingReceive();
-
-                Info("================\n" + session.getContent());
-                if (session.getPerformative()==ACLMessage.AGREE){
-                        Info("Agree recibido");
-                        peopleToTransfer -= 1;
-                }
-        }
-        
-        return myStatus;
-    }
+    
+    
     // Antes de cerrar el problema destruimos los NPCs creados previamente
     // Añadido performativas
     @Override
