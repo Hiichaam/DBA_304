@@ -38,6 +38,26 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
     int EnergyLimitToAskRecharge = 30 ;
     ACLMessage mtt, bb1f, transfer;
     
+    // Cambio en isTargetBack. Si el objetivo está atrás que gire para un lado
+    // Necesario en Hon1 -> desde la primera ciudad
+    @Override
+    protected double U(Environment E, Choice a){
+        if (whichWall.equals("LEFT")) {
+            return goFollowWallLeft(E, a);
+        } else if(whichWall.equals("RIGHT")){
+            return goFollowWallRight(E, a);
+        } else if(E.isTargetBack()){
+            if (a.getName().equals("LEFT")) {
+                return Choice.ANY_VALUE;
+            }
+            return Choice.MAX_UTILITY;
+        } else if (!E.isFreeFront()) {
+            return goAvoid(E, a);
+        } else {
+            return goAhead(E, a);
+        }
+    }
+    
     @Override
     public boolean MyReadPerceptions (){
         Info("Reading perceptions...");
@@ -300,8 +320,8 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         
     }
     
-    public Status doTransfer(String n, String type){
-        int peopleToTransfer = Integer.parseInt(n);
+    public Status doTransfer(){
+        int peopleToTransfer = peopleNames.length;
         Info("transfer\n" );
         while(peopleToTransfer > 0){
             if (transfer == null) {
@@ -562,7 +582,7 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         } else if (current_goal[0].equals("TRANSFER")){
             Info("Estoy en el transfer");
             System.out.println(getEnvironment().getCurrentGoal());
-            doTransfer(current_goal[1], current_goal[2]);
+            doTransfer();
             
             Info("Goal " + this.getEnvironment().getCurrentGoal() + " has been solved!");
             getEnvironment().setNextGoal();
