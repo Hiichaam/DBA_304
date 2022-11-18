@@ -35,7 +35,7 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
     String destCity = "";
     String destProvider = "";
     String[] peopleNames;
-    int EnergyLimitToAskRecharge = 20 ;
+    int EnergyLimitToAskRecharge = 30 ;
     ACLMessage mtt, bb1f, transfer;
     
     @Override
@@ -266,7 +266,7 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         ArrayList<String> destProviders = this.DFGetAllProvidersOf("TYPE " + droidship.toUpperCase());
 
         for(String provider: destProviders){
-            if(this.DFHasService(destProvider, sessionKey)){
+            if(this.DFHasService(provider, sessionKey)){
                 destProvider = provider;
             }
         }
@@ -281,8 +281,10 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         this.LARVAsend(outbox);
         transfer = LARVAblockingReceive();  
       
-        contentTokens = transfer.getContent().split(";");
-        String destCity = contentTokens[3];
+        Info("1 sageasga ");
+        contentTokens = transfer.getContent().split("/")[3].split(" ");
+        
+        destCity = contentTokens[2];
         //coordinates = coordinates.replace(coordinates, "");
 
         outbox = session.createReply();
@@ -299,16 +301,15 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
     }
     
     public Status doTransfer(String n, String type){
-        int peopleToTransfer = Integer.valueOf(n);
+        int peopleToTransfer = Integer.parseInt(n);
         Info("transfer\n" );
         while(peopleToTransfer > 0){
             if (transfer == null) {
                 outbox = new ACLMessage();
                 outbox.setSender(getAID());
                 outbox.addReceiver(new AID(destProvider, AID.ISLOCALNAME));
-                outbox.setPerformative(ACLMessage.REQUEST);
-                outbox.setProtocol("DROIDSHIP");
-                outbox.setConversationId(sessionKey);	
+                //outbox.setPerformative(ACLMessage.REQUEST);
+                //outbox.setConversationId(sessionKey);	
                 //outbox.setContent("TRANSFER " + peopleNames[peopleToTransfer-1]);
             } else { // Else folllow the dialogue
                 outbox = transfer.createReply();
@@ -321,9 +322,11 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
                 outbox.setConversationId(sessionKey);	
                 outbox.setContent("TRANSFER " + peopleNames[peopleToTransfer-1]);
                 this.LARVAsend(outbox);*/
+                
+                outbox.setPerformative(ACLMessage.REQUEST);
+                outbox.setContent("TRANSFER " + peopleNames[peopleToTransfer-1]);
                 outbox.setProtocol("DROIDSHIP");
                 outbox.setConversationId(sessionKey);
-                outbox.setContent("TRANSFER " + peopleNames[peopleToTransfer-1]);
                 outbox.setReplyWith(peopleNames[peopleToTransfer-1]);
                 this.LARVAsend(outbox);
                 transfer = LARVAblockingReceive();
@@ -557,7 +560,10 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
                 return Status.SOLVEPROBLEM;
             }
         } else if (current_goal[0].equals("TRANSFER")){
+            Info("Estoy en el transfer");
+            System.out.println(getEnvironment().getCurrentGoal());
             doTransfer(current_goal[1], current_goal[2]);
+            
             Info("Goal " + this.getEnvironment().getCurrentGoal() + " has been solved!");
             getEnvironment().setNextGoal();
             return Status.SOLVEPROBLEM;            

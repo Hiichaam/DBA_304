@@ -347,7 +347,7 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
     public double goAvoid(Environment E, Choice a){
         // Las siguientes lineas de codigo hacen que en el Honor1 el agente se de un buen paseo -> Decidimos dejar el agente con tendencia de giro a la IZDA
         
-        if (E.isTargetLeft() || E.isTargetFrontLeft()){
+        if (E.isTargetLeft() ){
             if (a.getName().equals("LEFT")) {
                 nextWhichwall = "RIGHT";
                 nextdistance = E.getDistance();
@@ -355,7 +355,7 @@ public class AT_ST_LAB1 extends AT_ST_FULL{
                 return Choice.ANY_VALUE;
             }
         }
-        else if(E.isTargetRight() || E.isTargetFrontRight()){
+        else if(E.isTargetRight() ){
             if (a.getName().equals("RIGHT")) {
                 nextWhichwall = "LEFT";
                 nextdistance = E.getDistance();
