@@ -26,6 +26,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
 /**
  *
  * @author dcardenas11
@@ -35,7 +37,7 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
     String destCity = "";
     String destProvider = "";
     String[] peopleNames;
-    int EnergyLimitToAskRecharge = 30 ;
+    int EnergyLimitToAskRecharge = 970 ;
     ACLMessage mtt, bb1f, transfer;
     
     // Cambio en isTargetBack. Si el objetivo está atrás que gire para un lado
@@ -72,7 +74,7 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         if (session.getContent().startsWith("Failure")){
             Error("Unable to read perceptions due to " + session.getContent());
             return false;
-        }
+        }        
         this.getEnvironment().setExternalPerceptions(session.getContent());
         //Info(this.easyPrintPerceptions());
         return true;
@@ -97,14 +99,20 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
             outbox = new ACLMessage();
             outbox.setSender(getAID());
             outbox.addReceiver(new AID(provider, AID.ISLOCALNAME));
+            outbox.setProtocol("DROIDSHIP");
             outbox.setPerformative(ACLMessage.QUERY_REF);
+            outbox.setReplyWith(String.valueOf(numMessage));
+            numMessage ++;
             outbox.setContent("TRANSPONDER");
             this.LARVAsend(outbox);
             session = LARVAblockingReceive();
-
-            contentTokens = session.getContent().split(",");
+            long time = 500;
+            try {
+                TimeUnit.SECONDS.sleep(1);
+            } catch (InterruptedException e){};
+            contentTokens = session.getContent().split("/");
             String coordinates = contentTokens[4];
-            coordinates = coordinates.replace(coordinates, "");
+            coordinates = coordinates.replace("GPS ", "");
 
             var location = new Point3D(coordinates);
             distances.add(E.getGPS().gridDistanceTo(location));
@@ -171,6 +179,7 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
 
     protected AT_ST_FULL.Status doCapture(String  nCaptures, String type){
         int i = 0;
+        int numMessage = 0;
         int numCaptures = Integer.parseInt(nCaptures);
         Info("Capturing " + nCaptures + " people " + type);
 
@@ -191,14 +200,21 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
             outbox = new ACLMessage();
             outbox.setSender(getAID());
             outbox.addReceiver(new AID(provider, AID.ISLOCALNAME));
+            outbox.setProtocol("DROIDSHIP");
             outbox.setPerformative(ACLMessage.QUERY_REF);
+            outbox.setReplyWith(String.valueOf(numMessage));
+            numMessage ++;
             outbox.setContent("TRANSPONDER");
             this.LARVAsend(outbox);
             session = LARVAblockingReceive();
 
-            contentTokens = session.getContent().split(",");
+            long time = 500;
+            try {
+                TimeUnit.SECONDS.sleep(1);
+            } catch (InterruptedException e){};
+            contentTokens = session.getContent().split("/");
             String coordinates = contentTokens[4];
-            coordinates = coordinates.replace(coordinates, "");
+            coordinates = coordinates.replace("GPS ", "");
 
             var location = new Point3D(coordinates);
             distances.add(E.getGPS().gridDistanceTo(location));
@@ -216,7 +232,6 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
             providers.add(map.get(distances.get(i)));
         }*/
         
-        int numMessage = 0;
         boolean mttFound = false;
         while (!mttFound){
             for(String provider: providers){
