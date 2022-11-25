@@ -9,8 +9,6 @@ import Environment.Environment;
 import agents.BB1F;
 import agents.DEST;
 import agents.DroidShip;
-import agents.MTT;
-import agents.YV;
 import ai.Choice;
 import geometry.Point3D;
 import jade.core.AID;

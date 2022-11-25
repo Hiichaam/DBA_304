@@ -1,32 +1,13 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package starwars;
 
 import Environment.Environment;
 import agents.BB1F;
 import agents.DEST;
-import agents.DroidShip;
-import agents.LARVAFirstAgent;
 import agents.MTT;
-import agents.YV;
 import ai.Choice;
-import ai.Plan;
-import com.sun.mail.imap.ACL;
-import geometry.Point3D;
-import glossary.Sensors;
 import jade.core.AID;
 import jade.lang.acl.ACLMessage;
-import jade.lang.acl.MessageTemplate;
-import java.math.MathContext;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -34,14 +15,24 @@ import java.util.concurrent.TimeUnit;
  */
 public class AT_ST_LAB2 extends AT_ST_LAB1{
 
-    String destCity = "";
-    String destProvider = "";
-    String[] peopleNames;
-    int EnergyLimitToAskRecharge = 970 ;
-    ACLMessage mtt, bb1f, transfer;
+    String destCity = ""; // Ciudad en la que se encuentra el DESTROYER. Se
+                          // averigua en String getMoveByCity(String droidship)
+    String destProvider = ""; // Nombre del DESTROYER de nuestra session. Se
+                          // averigua en String getMoveByCity(String droidship)
+    String[] peopleNames; // Array de los nombres de los Jedis de una ciudad. Se
+                          // averigua en String[] queryPeopleName(String type)
+    int EnergyLimitToAskRecharge = 15; // Umbral a partir del cual solicitamos recarga
+    ACLMessage mtt, bb1f, dest; // Mensajes para cada NPC con el que se interactua
+    
     
     // Cambio en isTargetBack. Si el objetivo está atrás que gire para un lado
-    // Necesario en Hon1 -> desde la primera ciudad
+    // Necesario en Hon1 -> desde la primera ciudad (el DEST puede encontrarse
+    // justo detrás)
+    
+    /**
+     * 
+     * @author Hicham Bouchemma 
+     */
     @Override
     protected double U(Environment E, Choice a){
         if (whichWall.equals("LEFT")) {
@@ -60,6 +51,13 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         }
     }
     
+    
+    // Se añaden performativas de Lab2
+    
+    /**
+     * 
+     * @author Alex Herrera
+     */
     @Override
     public boolean MyReadPerceptions (){
         Info("Reading perceptions...");
@@ -80,21 +78,33 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         return true;
     }
 
+    
+    // Recarga energía del agente ITT. 
+    
+    /**
+     * 
+     * @author Hicham Bouchemma
+     * @author Dani Cardenas
+     * @author David Correa
+     * @author Alex Herrera
+     */
     public void EnergyRecharge() {
         int numMessage = 0;
-        ACLMessage perceptions_session;
-        //perceptions_session = session;
-        Info("Recharging...");
-        ArrayList<String> Globalproviders = this.DFGetAllProvidersOf("TYPE BB1F");
-        ArrayList<String> providers = new ArrayList<String>();
-        for(var provider : Globalproviders) {
-            if (this.DFHasService(provider, sessionKey)) {
-                providers.add(provider);
+
+        // Seleccionamos los BB1F de nuestra session y los guardamos en sessionProviders
+        Info("Recharging... (asking BB1F)");
+        ArrayList<String> globalProviders = this.DFGetAllProvidersOf("TYPE BB1F");
+        ArrayList<String> sessionProviders = new ArrayList<String>();
+        for(var globalProvider : globalProviders) {
+            if (this.DFHasService(globalProvider, sessionKey)) {
+                sessionProviders.add(globalProvider);
             }
         }
         ArrayList<Integer> distances = new ArrayList<Integer>();
 
-        //Esto es para ordenar los providers por cercania
+        // Ordenamos los BB1F por cercanía
+        // NOTA: Queda comentado hasta que Luis cambie el numero máximo de TRANSPONDER
+        
         /*for(var provider : providers){
             outbox = new ACLMessage();
             outbox.setSender(getAID());
@@ -117,7 +127,7 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
             var location = new Point3D(coordinates);
             distances.add(E.getGPS().gridDistanceTo(location));
         }
-        //A ver si a alguien se le ocurre una forma mas simple de ordenar provider por el vector distances, esto me parece mucho lio
+
         Map<Integer, String> map = new HashMap<Integer, String>();
         for(Integer i = 0; i < providers.size(); i++) {
           map.put(distances.get(i),providers.get(i));
@@ -129,10 +139,13 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         for(Integer i = 0; i < map.size(); i++) {
           providers.add(map.get(distances.get(i)));
         }*/
-
+        
+        // Solicitamos recarga a todos los BB1F (por cercanía) hasta que
+        // recibimos un AGREE por parte de alguno. Luego le enviamos nuestras
+        // coordenadas
         boolean rechargeAgentFound = false;
         while (!rechargeAgentFound){
-            for(String provider: providers){
+            for(String provider: sessionProviders){
                 outbox = new ACLMessage();
                 outbox.setSender(getAID());
                 outbox.addReceiver(new AID(provider, AID.ISLOCALNAME));
@@ -153,28 +166,28 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
                 }
             }
         }
-        //Esta parte de larva no esta documentada y no tengo ni idea de como usar esto, creo que es algo asi, pero no puedo ver el constructor de MatchExpression
-        /*var t = new ACLMessage();
-        t.setPerformative(ACLMessage.INFORM);
-        var template = new MessageTemplate(new MatchExpression(t));
-        LARVAblockingReceive(template);*/
-
-
-        //Habria que hacerlo con lo que hay arriba comentado, esto es una alternativa, ya vemos luego con cual nos quedamos.
+        
+        // Esperamos hasta que llegue el BB1F y nos recargue. Cuando nos recarga,
+        // salimos del bucle de espera (while) y leemos percepciones. La recarga
+        // ha sido realizada correctamente
         boolean chargeDone = false;
         while(!chargeDone){
             bb1f = LARVAblockingReceive();
             if(bb1f.getPerformative() == ACLMessage.INFORM)
                 chargeDone = true;
         }
-        //session = perceptions_session;
+        
         this.MyReadPerceptions();
         Info("Rechage completed");
     }
 
+    
+    // Funcion de captura de Jedis. Se encarga de contactar al agente de 
+    // BackUp MTT, de conseguir los nombres de los Jedis y de capturarlos
+    
     /**
      *
-     * @author Hicham
+     * @author Hicham Bouchemma
      */
 
     protected AT_ST_FULL.Status doCapture(String  nCaptures, String type){
@@ -182,15 +195,12 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         int numMessage = 0;
         int numCaptures = Integer.parseInt(nCaptures);
         Info("Capturing " + nCaptures + " people " + type);
-
-        /*ArrayList<String> providers = this.DFGetAllProvidersOf("TYPE MTT");
-        ArrayList<Integer> distances = new ArrayList<Integer>();*/
         
-        ArrayList<String> Globalproviders = this.DFGetAllProvidersOf("TYPE MTT");
-        ArrayList<String> providers = new ArrayList<String>();
-        for(var provider : Globalproviders) {
+        ArrayList<String> globalProviders = this.DFGetAllProvidersOf("TYPE MTT");
+        ArrayList<String> sessionProviders = new ArrayList<String>();
+        for(var provider : globalProviders) {
             if (this.DFHasService(provider, sessionKey)) {
-                providers.add(provider);
+                sessionProviders.add(provider);
             }
         }
         ArrayList<Integer> distances = new ArrayList<Integer>();
@@ -234,7 +244,7 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         
         boolean mttFound = false;
         while (!mttFound){
-            for(String provider: providers){
+            for(String provider: sessionProviders){
                 outbox = new ACLMessage();
                 outbox.setSender(getAID());
                 outbox.addReceiver(new AID(provider, AID.ISLOCALNAME));
@@ -248,8 +258,6 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
 
                 mtt = LARVAblockingReceive();
                 if (mtt.getPerformative()==ACLMessage.AGREE){
-                    Info(" YAAAA VOOOY " );
-                    //mttProvider = provider;
                     mttFound = true;
                     break;
                 }else if (mtt.getPerformative()==ACLMessage.REFUSE){
@@ -260,14 +268,17 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
 
         boolean backupHasArrived = false;
         while(!backupHasArrived){
-            Info(" estoy dentro " );
             mtt = LARVAblockingReceive();
             if(mtt.getPerformative() == ACLMessage.INFORM)
-                backupHasArrived = true;
-            
+                backupHasArrived = true; 
         }
+        
+        // Hasta este punto la función es calcada a void EnergyRecharge().
+        // Ahora preguntamos al SM por los nombres de los Jedis y los vamos 
+        // capturando uno a uno, hasta que hemos llegado al número de capturas
+        // solicitadas
 
-        peopleNames = queryPeopleName(type);
+        peopleNames = queryPeopleNames(type);
         while (i < numCaptures){
             outbox = session.createReply();
             outbox.setContent("Request capture " + peopleNames[i] + " session " + sessionKey);
@@ -281,102 +292,27 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
                 ++i;
         }
         
+        // Liberamos al MTT usado con un mensaje de Cancel. En este punto ya 
+        // tenemos los Jedis solicitados en nuestra bodega
         
         outbox = mtt.createReply();
-        
         outbox.setPerformative(ACLMessage.CANCEL);
         outbox.setContent("");
         outbox.setProtocol("DROIDSHIP");
         outbox.setConversationId(sessionKey);
-        //outbox.setContent(this.Transponder());
-        //outbox.setConversationId(sessionKey);
         this.LARVAsend(outbox);
-        //mtt = LARVAblockingReceive();
-
         return myStatus;
     }
     
-   public String getMoveByCity(String droidship){
-        Info("obteniendo dest");
-        ArrayList<String> destProviders = this.DFGetAllProvidersOf("TYPE " + droidship.toUpperCase());
-
-        for(String provider: destProviders){
-            if(this.DFHasService(provider, sessionKey)){
-                destProvider = provider;
-            }
-        }
-        
-        outbox = new ACLMessage();
-        outbox.setSender(getAID());
-        outbox.addReceiver(new AID(destProvider, AID.ISLOCALNAME));
-        outbox.setPerformative(ACLMessage.QUERY_REF);
-        outbox.setProtocol("DROIDSHIP");
-        outbox.setConversationId(sessionKey);
-        outbox.setContent("TRANSPONDER");
-        this.LARVAsend(outbox);
-        transfer = LARVAblockingReceive();  
-      
-        Info("1 sageasga ");
-        contentTokens = transfer.getContent().split("/")[3].split(" ");
-        
-        destCity = contentTokens[2];
-        //coordinates = coordinates.replace(coordinates, "");
-
-        outbox = session.createReply();
-        outbox.setContent("Request course in " + destCity + " session " + sessionKey);
-        outbox.setPerformative(ACLMessage.REQUEST);
-        outbox.setConversationId(sessionKey);
-        this.LARVAsend(outbox);
-        session = this.LARVAblockingReceive();
-        getEnvironment().setExternalPerceptions(session.getContent());
-        Info("dest obtenido");
-        return destCity;
-        
-        
-    }
-    
-    public Status doTransfer(){
-        int peopleToTransfer = peopleNames.length;
-        Info("transfer\n" );
-        while(peopleToTransfer > 0){
-            if (transfer == null) {
-                outbox = new ACLMessage();
-                outbox.setSender(getAID());
-                outbox.addReceiver(new AID(destProvider, AID.ISLOCALNAME));
-                //outbox.setPerformative(ACLMessage.REQUEST);
-                //outbox.setConversationId(sessionKey);	
-                //outbox.setContent("TRANSFER " + peopleNames[peopleToTransfer-1]);
-            } else { // Else folllow the dialogue
-                outbox = transfer.createReply();
-            }
-                /*outbox = new ACLMessage();
-                outbox.setSender(getAID());
-                outbox.addReceiver(new AID(destProvider, AID.ISLOCALNAME));
-                outbox.setPerformative(ACLMessage.REQUEST);
-                outbox.setProtocol("DROIDSHIP");
-                outbox.setConversationId(sessionKey);	
-                outbox.setContent("TRANSFER " + peopleNames[peopleToTransfer-1]);
-                this.LARVAsend(outbox);*/
-                
-                outbox.setPerformative(ACLMessage.REQUEST);
-                outbox.setContent("TRANSFER " + peopleNames[peopleToTransfer-1]);
-                outbox.setProtocol("DROIDSHIP");
-                outbox.setConversationId(sessionKey);
-                outbox.setReplyWith(peopleNames[peopleToTransfer-1]);
-                this.LARVAsend(outbox);
-                transfer = LARVAblockingReceive();
-
-                Info("================\n" + transfer.getContent());
-                if (transfer.getPerformative()==ACLMessage.INFORM){
-                        Info("Transferido" + peopleNames[peopleToTransfer-1]);
-                        peopleToTransfer -= 1;
-                }
-        }
-        
-        return myStatus;
-    }
-    
-    protected String[] queryPeopleName(String type){
+    // Función similar al antiguo doQueryPeople(String type) salvo que en lugar
+    // de calcular el número de personas de tipo type, obtiene sus nombres para 
+    // posteriormente poder capturarlos
+    // NOTA: En este Lab2, type = Jedi
+    /**
+     * 
+     * @author Dani Cardenas
+     */
+    protected String[] queryPeopleNames(String type){
         Info("Querying people " + type);
         outbox = session.createReply();
         outbox.setContent("Query " + type.toUpperCase() + " session " + sessionKey);
@@ -385,12 +321,103 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         this.LARVAsend(outbox);
         session = LARVAblockingReceive();
         getEnvironment().setExternalPerceptions(session.getContent());
-        Message("Found " + getEnvironment().getPeople().length + " " + type + " in " + getEnvironment().getCurrentCity());
+        Info("Found " + getEnvironment().getPeople().length + " " + type + " in " + getEnvironment().getCurrentCity());
         return this.getEnvironment().getPeople();
     }
     
-    // Igual que en los agentes anteriores, excepto:
-    // Cambio en las performativas
+    
+    // Función que localiza los DESTROYER de nuestra session, selecciona uno
+    // de ellos y consigue la ciudad en la que se encuentra.
+    // Es parte del procedimiento para resolver el Goal MOVEBY DEST
+    /**
+     * 
+     * @author Dani Cardenas 
+     */
+    public String getMoveByCity(String droidship){
+        Info("Getting DEST name and position ...");
+        
+        // Obtenemos el nombre de el/los DEST de nuestra session (lo de siempre vaya)
+        ArrayList<String> destProviders = this.DFGetAllProvidersOf("TYPE " + droidship.toUpperCase());
+        for(String provider: destProviders){
+            if(this.DFHasService(provider, sessionKey)){
+                destProvider = provider;
+            }
+        }
+        
+        // Solicitamos un TRANSPONDER para saber en qué ciudad se encuentra. Para 
+        // ello, usamos un mensaje con performativa QUERY_REF.
+        outbox = new ACLMessage();
+        outbox.setSender(getAID());
+        outbox.addReceiver(new AID(destProvider, AID.ISLOCALNAME));
+        outbox.setPerformative(ACLMessage.QUERY_REF);
+        outbox.setProtocol("DROIDSHIP");
+        outbox.setConversationId(sessionKey);
+        outbox.setContent("TRANSPONDER");
+        this.LARVAsend(outbox);
+        dest = LARVAblockingReceive();  
+      
+        // Obtenemos la ciudad gracias al TRANSPONDER recibido y solicitamos
+        // al SM el camino hasta allí. Cuando lo tenemos, lo incluimos en nuestro
+        // Environment para poder ir hacia él. Acabamos devolviendo la ciudad
+        // para posteriormente poder saber que hemos llegado satisfactoriamente
+        contentTokens = dest.getContent().split("/")[3].split(" ");
+        destCity = contentTokens[2];
+        
+        outbox = session.createReply();
+        outbox.setContent("Request course in " + destCity + " session " + sessionKey);
+        outbox.setPerformative(ACLMessage.REQUEST);
+        outbox.setConversationId(sessionKey);
+        this.LARVAsend(outbox);
+        session = this.LARVAblockingReceive();
+        getEnvironment().setExternalPerceptions(session.getContent());
+        Info("DEST found");
+        return destCity;
+    }
+    
+    
+    // Función que transfiere las capturas al DEST una vez hemos llegado
+    // a la ciudad donde se encuentra
+    /**
+     * 
+     * @author Dani Cardenas 
+     */
+    public Status doTransfer(){
+        int peopleToTransfer = peopleNames.length;
+        Info("We are Transfering ...\n" );
+        
+        // Al primer if únicamente se accede al transferir el primer Jedi
+        // (en principio) y sirve para configurar el mensaje. Después, vamos
+        // transfiriendo los Jedis uno a uno cambiando el contenido del 
+        // mensaje en función del nombre del Jedi correspondiente
+        while(peopleToTransfer > 0){
+            if (dest == null) {
+                outbox = new ACLMessage();
+                outbox.setSender(getAID());
+                outbox.addReceiver(new AID(destProvider, AID.ISLOCALNAME));
+            } else { // Else follow the dialogue
+                outbox = dest.createReply();
+            } 
+               
+            outbox.setPerformative(ACLMessage.REQUEST);
+            outbox.setContent("TRANSFER " + peopleNames[peopleToTransfer-1]);
+            outbox.setProtocol("DROIDSHIP");
+            outbox.setConversationId(sessionKey);
+            outbox.setReplyWith(peopleNames[peopleToTransfer-1]);
+            this.LARVAsend(outbox);
+            dest = LARVAblockingReceive();
+
+            Info("================\n" + dest.getContent());
+            if (dest.getPerformative()==ACLMessage.INFORM){
+                    Info("Jedi named [" + peopleNames[peopleToTransfer-1] + "] has been transfered");
+                    peopleToTransfer -= 1;
+            }
+        }
+        
+        return myStatus;
+    }
+    
+    
+    // Se incluyen Performativas
     @Override
     public AT_ST_FULL.Status MyOpenProblem() {
 
@@ -434,8 +461,8 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         }
     }
     
-    // Igual que en los agentes anteriores, excepto:
-    // Cambio en las performativas
+    
+    // Se incluyen Performativas y lanzamiento de NPCs necesarios
     @Override
     public AT_ST_FULL.Status MyJoinSession(){
         outbox = session.createReply();
@@ -501,6 +528,8 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         return SelectMission();
     }
     
+    
+    // Se incluyen Performativas
     @Override
     public Status myAssistedNavigation(int goalx, int goaly) {
         Info("Requesting course to " + goalx + " " + goaly);
@@ -517,6 +546,8 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         return Status.CHECKIN.SOLVEPROBLEM;
     }
     
+    
+    // Se incluyen Performativas
     @Override
     public boolean MyExecuteAction (String action){
         Info("Executing action " + action);
@@ -535,6 +566,13 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         return true;
     }
 
+    // Se incluyen Performativas y la opción de resolver las nuevas 
+    // misiones de Lab2: CAPTURE, MOVEBY y TRANSFER 
+    /**
+     * 
+     * @author Dani Cardenas
+     * @author Alex Herrera
+     */
     @Override
     public AT_ST_FULL.Status MySolveProblem(){
         if (getEnvironment().getCurrentMission().isOver()){
@@ -605,13 +643,10 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         }
         
         return Status.EXIT;
-    }
+    }    
     
     
-    
-    
-    // Antes de cerrar el problema destruimos los NPCs creados previamente
-    // Añadido performativas
+    // Se incluyen Performativas
     @Override
     public Status MyCloseProblem(){
         this.doDestroyNPC();
@@ -632,6 +667,8 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         return Status.CHECKOUT;
     }
     
+    
+    // Se actualiza como se indica en el guión de prácticas: incluyendo TRANSPONDER
     @Override
     public ACLMessage LARVAblockingReceive() {
         boolean exit = false;
@@ -650,6 +687,19 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         return res;
     }
 
+    
+    // Se incluye un parámetro String city que será vacío (city = "") cuando
+    // el Goal sea MOVEIN y que almacenará la ciudad donde se encuentra el
+    // DEST cuando el Goal sea MOVEBY.
+    // Para verificar si hemos llegado a la ciudad, verificamos si hemos llegado
+    // a la ciudad dependiendo del Goal:
+    // 1) current_goal[1]: Para Goals del tipo MOVEIN
+    // 2) String city: Para Goals del tipo MOVEBY
+    // El resto de la función se mantiene igual que la versión del Lab1
+    /**
+     * 
+     * @author Dani Cardenas 
+     */
     public AT_ST_FULL.Status MovementGoal(String city){
         behaviour = AgPlan(E, A);
         // Si se ha completado el plan se avanza de objetivo
