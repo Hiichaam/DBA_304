@@ -32,6 +32,7 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
     /**
      * 
      * @author Hicham Bouchemma 
+     * @author David Correa
      */
     @Override
     protected double U(Environment E, Choice a){
@@ -188,6 +189,7 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
     /**
      *
      * @author Hicham Bouchemma
+     * @author Dani Cardenas 
      */
 
     protected AT_ST_FULL.Status doCapture(String  nCaptures, String type){
@@ -332,6 +334,7 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
     /**
      * 
      * @author Dani Cardenas 
+     * @author Hicham Bouchemma
      */
     public String getMoveByCity(String droidship){
         Info("Getting DEST name and position ...");
@@ -380,6 +383,8 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
     /**
      * 
      * @author Dani Cardenas 
+     * @author Hicham Bouchemma
+     * 
      */
     public Status doTransfer(){
         int peopleToTransfer = peopleNames.length;
