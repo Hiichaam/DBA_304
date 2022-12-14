@@ -93,10 +93,7 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
         Info("Found problem manager " + problemManager);
         // Seleccionar el problema, en este caso son los APR, NOT, SOB, MAT
         // de la práctica
-        problem = this.inputSelect("Please select problem to solve", problems, problem);
-        if (problem == null) {
-            return AT_ST_FULL.Status.CHECKOUT;
-        }
+        problem = "Coruscant";
         this.outbox = new ACLMessage();
         outbox.setSender(getAID());
         outbox.addReceiver(new AID(problemManager, AID.ISLOCALNAME));
@@ -127,24 +124,8 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
     // Se incluyen Performativas y lanzamiento de NPCs necesarios
     @Override
     public AT_ST_FULL.Status MyJoinSession(){
-        outbox = session.createReply();
-
-        // Pedir las ciudades disponibles
-        outbox.setContent("Query cities session " + sessionKey);
-
-        // Cambio performativa y conversational id
-        outbox.setPerformative(ACLMessage.QUERY_REF);
-        outbox.setConversationId(sessionKey);
-
-        this.LARVAsend(outbox);
-        session = this.LARVAblockingReceive();
-        this.getEnvironment().setExternalPerceptions(session.getContent());
-
-        // Guardamos la lista de ciudades proporcionada
-        cities = getEnvironment().getCityList();
-
-        // Preguntamos al usuario en qué ciudad quiere aparecer
-        current_city = this.inputSelect("Please select city to start", cities, "");
+        // Obtenemos las coordenadas de la ciudad
+        current_city = "Fort Babine";
         city_coord = getEnvironment().getCityPosition(current_city);
 
         this.resetAutoNAV();
