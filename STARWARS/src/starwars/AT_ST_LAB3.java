@@ -16,14 +16,24 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
 
     // boleano para el caso de que seamos host de la sesion y tengamo que hacer el open problem
     boolean host = true;
-
-    //n es el numero de equipos participando en la sesion
+    // Alias de nuestra sesion para cuando actuamos como host
+    String hostAlias = "G304";
+    // Alias de la sesion que nos unimos cuando somos cliente
+    String guestAlias = "";
+    //n es el número de equipos participando en la sesion
     int n = 1;
 
     public void setup() {
         this.enableDeepLARVAMonitoring();
-        //LARVAFirstAgent.defSessionAlias("Grupo304");
+        //El guion dice que hay que usar este metodo, pero me sale que no existe
+        //LARVAFirstAgent.defSessionAlias("G304");
+
         super.setup();
+        if(host)
+            sessionAlias = hostAlias;
+        else
+            sessionAlias = guestAlias;
+
         showPerceptions = true;
         this.deactivateSequenceDiagrams();
 
@@ -93,7 +103,7 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
         Info("Found problem manager " + problemManager);
         // Seleccionar el problema, en este caso son los APR, NOT, SOB, MAT
         // de la práctica
-        problem = "Coruscant";
+        problem = "CoruscantSingle";
         this.outbox = new ACLMessage();
         outbox.setSender(getAID());
         outbox.addReceiver(new AID(problemManager, AID.ISLOCALNAME));
@@ -124,9 +134,55 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
     // Se incluyen Performativas y lanzamiento de NPCs necesarios
     @Override
     public AT_ST_FULL.Status MyJoinSession(){
+        if(!host){
+            var tmpProviders = DFGetAllProvidersOf(sessionAlias).get(0);
+
+            if(tmpProviders != null){
+                sessionManager = tmpProviders;
+            } else {
+                Error("No session manager found");
+                return AT_ST_FULL.Status.CHECKOUT;
+            }
+
+            var services = DFGetAllServicesProvidedBy(sessionManager);
+            for (var s : services) {
+                if (s.startsWith("SESSION::")) {
+                    sessionKey = s;
+                    break;
+                }
+            }
+
+            this.outbox = new ACLMessage();
+            outbox.setSender(getAID());
+            outbox.addReceiver(new AID(sessionManager, AID.ISLOCALNAME));
+        } else {
+            outbox = session.createReply();
+        }
+        // Pedir las ciudades disponibles
+        outbox.setContent("Query cities session " + sessionKey);
+
+        // Cambio performativa y conversational id
+        outbox.setPerformative(ACLMessage.QUERY_REF);
+        outbox.setConversationId(sessionKey);
+
+        this.LARVAsend(outbox);
+        session = this.LARVAblockingReceive();
+        this.getEnvironment().setExternalPerceptions(session.getContent());
+
         // Obtenemos las coordenadas de la ciudad
         current_city = "Fort Babine";
         city_coord = getEnvironment().getCityPosition(current_city);
+
+
+        // No es necesario porque siempre iniciamos en Fort Babine
+/*
+        // Guardamos la lista de ciudades proporcionada
+        cities = getEnvironment().getCityList();
+
+        // Preguntamos al usuario en qué ciudad quiere aparecer
+        current_city = this.inputSelect("Please select city to start", cities, "");
+        city_coord = getEnvironment().getCityPosition(current_city);
+*/
 
         this.resetAutoNAV();
         this.DFAddMyServices(new String[]{"TYPE ITT"});
