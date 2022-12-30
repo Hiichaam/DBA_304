@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
 
 public class AT_ST_LAB3 extends AT_ST_LAB2 {
     // Alias de nuestra sesion 
-    String sessionAlias = "G304";
+    String sessionAlias = "milanesa";
     ACLMessage controller;
 
     public void setup() {
@@ -49,19 +49,57 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
                 break;
         }
     }
+    
+    @Override
+    public Status MyCheckin() {
+        Info("Loading passport and checking-in to LARVA");
+        //this.loadMyPassport("config/DANIEL_CARDENAS_CASTRO.passport");
+        
+        if (!doLARVACheckin()) {
+            Error("Unable to checkin");
+            return Status.EXIT;
+        }
+        return Status.JOINSESSION;
+    }
 
     @Override
     public AT_ST_FULL.Status MyJoinSession(){
-        ArrayList<String> allSM = new ArrayList<>();
-        allSM = this.DFGetAllProvidersOf("SESSION MANAGER");
+        
+        // Obtenemos el sessionManager buscando por la lista de todos los
+        // session managers
+        ArrayList<String> allSM = this.DFGetAllProvidersOf("SESSION MANAGER");
         
         for (String sm : allSM){
-            System.out.println(sm);
             if (this.DFHasService(sm, sessionAlias)){
-                session.addReceiver(new AID(sm, AID.ISLOCALNAME));
+                //session.addReceiver(new AID(sm, AID.ISLOCALNAME));
+                sessionManager = sm;
+                break;
             }
         }
+        System.out.println("Session manager: "+sessionManager);
+        // Otra alternativa
+        // int i=0;
+        // do{
+        //   sessionManager = allSM.get(i);
+        //   i++;
+        //}while(!this.DFHasService(sessionManager, sessionAlias));
+            
+        // Hasta este punto tenemos localizado nuestro session manager gracias
+        // al session alias. Tendremos algo como
+        // |S.M. XXX      |🟢|ADMIN     |SESSION MANAGER|
+        // SESSION MANAGER XXXX |PROBLEM XXXX|XXXX  |SESSION::sessionKey|
+        // Por tanto, tenemos que obtener los servicios que tiene nuestro session
+        // manager y filtrar por el que empieza por SESSION:: para obtener el sessionKey
         
+        ArrayList<String> allServices = this.DFGetAllServicesProvidedBy(sessionManager);
+        for (String Service : allServices){
+            if (Service.startsWith("SESSION::")){
+                sessionKey = Service;
+                break;
+            }
+        }
+        System.out.println("Session key"+sessionKey);
+                
         current_city = "Whitehorse";
         
         this.resetAutoNAV();
