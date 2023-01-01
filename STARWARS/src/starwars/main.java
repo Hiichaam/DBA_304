@@ -14,7 +14,7 @@ public class main {
     public static void main(String[] args) {
         LARVABoot boot = new LARVABoot();
         boot.Boot("isg2.ugr.es",1099);
-        boot.loadAgent("SSD", agents.SSD.class);
+        boot.launchAgent("SSD", agents.SSD.class);
         boot.loadAgent("DC-" + getHexaKey(), AT_ST_LAB3.class);
         boot.WaitToShutDown();    }
     

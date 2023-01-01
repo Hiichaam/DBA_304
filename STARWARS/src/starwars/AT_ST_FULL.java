@@ -25,6 +25,7 @@ public class AT_ST_FULL extends LARVAFirstAgent{
         CHECKIN, // Send passport to Identity Manager
         OPENPROBLEM, // ASks Problem Manager to open an instance of a problem
         SOLVEPROBLEM, // Really do this!
+        SELECTGOAL,
         JOINSESSION,
         CLOSEPROBLEM, // After that, ask Problem Manager to close the problem
         CHECKOUT, // ASk Identity Manager to leave out

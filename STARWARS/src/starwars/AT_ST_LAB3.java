@@ -15,8 +15,10 @@ import java.util.concurrent.TimeUnit;
 
 public class AT_ST_LAB3 extends AT_ST_LAB2 {
     // Alias de nuestra sesion 
-    String sessionAlias = "milanesa";
+    String sessionAlias = "milanesa2";
     ACLMessage controller;
+    ACLMessage controller_outbox;
+    boolean goalCompleted = false;
 
     @Override
     public void setup() {
@@ -24,7 +26,8 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
 
         super.setup();
     }
-
+    
+    // Añadido nuevo estado SELECTGOAL
     @Override
     public void Execute() {
         Info("Status: " + myStatus.name());
@@ -57,19 +60,24 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
     @Override
     public AT_ST_FULL.Status MovementGoal(String city){
         behaviour = AgPlan(E, A);
-        // Si se ha completado el plan se avanza de objetivo
+        // Si se ha completado el plan se avanza de ojetivo
+        Info("Current goal: " + current_goal[0] + " "+ current_goal[1]);
         if (behaviour == null || behaviour.isEmpty()) {
             if ("MOVEIN".equals(current_goal[0])){
                 if (getEnvironment().getCurrentCity().equals(current_goal[1])){
-                    Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!");
-                    getEnvironment().setNextGoal();
-                    return AT_ST_FULL.Status.SELECTGOAL;
+                    Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!!!!!!!!");
+                    informBoss();
+                    //getEnvironment().setNextGoal();
+                    goalCompleted = true;
+                    return Status.SELECTGOAL;
                 }
 	    } else { // "MOVEBY <droidship>".equals(current_goal)
 	    	if (getEnvironment().getCurrentCity().equals(city)){
+                    Info("I am in "+city);
                     Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!");
-                    getEnvironment().setNextGoal();
-                    return AT_ST_FULL.Status.SELECTGOAL;
+                    //getEnvironment().setNextGoal();
+                    goalCompleted = true;
+                    return Status.SELECTGOAL;
                 }
 	    }
             Alert("Found no plan to execute");
@@ -95,6 +103,13 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
         }
     }
     
+    // Cambio sustancial: ahora al solucionar un goal no volvemos al SOLVEPROBLEM
+    // si no que vamos al SELECTGOAL para iterar al siguiente GOAL
+    // o pedirselo al SSD en caso de que no tengamos GOAL.
+    
+    // Algunos goals como CAPTURE han sido divididos en varios goals: 
+    // REQUEST MTT, CAPTURE, CANCEL, por lo que la funcionalidad del LAB2
+    // se ha visto dividida en varias funciones
     @Override
     public AT_ST_FULL.Status MySolveProblem(){
         if (getEnvironment().getCurrentMission().isOver()){
@@ -106,6 +121,8 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
         // Obtenemos el objetivo actual. Los objetivos van separados por espacios
         // por lo que los splitteamos por espacios
         current_goal = getEnvironment().getCurrentGoal().split(" ");
+        
+        Info("Current goal: "+current_goal[0]);
   
         // Si el objetivo es movernos, utilizamos en asistente de LARVA
         // para desplazarnos y se realiza el algoritmo de movimiento
@@ -124,6 +141,7 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
                 return MovementGoal("");
             } else {
                 Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!");
+                goalCompleted = true;
                 return Status.SELECTGOAL;
             }  
         // Si el objetivo es listar, obtenemos la lista de personas dado un tipo
@@ -131,15 +149,28 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
         } else if (current_goal[0].equals("LIST")){
             doQueryPeople(current_goal[1]);
             Info("Goal " + current_goal[0] + " " + current_goal[1] + " " + current_goal[2] + " has been solved!");
+            goalCompleted = true;
             
             return Status.SELECTGOAL;
         } else if (current_goal[0].equals("REPORT")){
             doReportTypeGoal(current_goal[1]);
             Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!");
+            goalCompleted = true;
+            return Status.SELECTGOAL;
+        } else if (current_goal[0].equals("REQUEST")){
+            doRequestGoal(current_goal[1]);
+            Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!");
+            goalCompleted = true;
             return Status.SELECTGOAL;
         } else if (current_goal[0].equals("CAPTURE")){
             doCapture(current_goal[1], current_goal[2]);
             Info("Goal " + this.getEnvironment().getCurrentGoal() + " has been solved!");
+            goalCompleted = true;
+            return Status.SELECTGOAL;
+        } else if (current_goal[0].equals("CANCEL")){
+            doGoalCancel("MTT");
+            Info("Goal " + this.getEnvironment().getCurrentGoal() + " has been solved!");
+            goalCompleted = true;
             return Status.SELECTGOAL;
         } else if (current_goal[0].equals("MOVEBY")){
             if (destCity.equals("")){
@@ -147,22 +178,85 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
                 return MovementGoal(destCity);
             } else {
                 Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!");
+                goalCompleted = true;
                 return Status.SELECTGOAL;
             }
         } else if (current_goal[0].equals("TRANSFER")){
             Info("Estoy en el transfer");
             System.out.println(getEnvironment().getCurrentGoal());
+            // No es necesario movernos a la ciudad de DEST ya que el goal
+            // anterior es precisamente MOVEIN <ciudad de DEST>
+            
+            //destCity = getMoveByCity(current_goal[1]);
+            //Info("Moving to "+ destCity);
+            //MovementGoal(destCity);
             doTransfer();
             
             Info("Goal " + this.getEnvironment().getCurrentGoal() + " has been solved!");
+            goalCompleted = true;
             return Status.SELECTGOAL;            
         }
         
         return Status.EXIT;
     } 
     
+    public Status doTransfer(){
+        Info("Getting DEST name and position ...");
+        
+        // Fragmento de código del getMoveByCity, no es necesario la función completa
+        ArrayList<String> destProviders = this.DFGetAllProvidersOf("TYPE DEST");
+        for(String provider: destProviders){
+            if(this.DFHasService(provider, sessionKey)){
+                destProvider = provider;
+            }
+        }
+        
+        int peopleToTransfer = peopleNames.length;
+        Info("We are Transfering " + peopleToTransfer );
+        
+        // Al primer if únicamente se accede al transferir el primer Jedi
+        // (en principio) y sirve para configurar el mensaje. Después, vamos
+        // transfiriendo los Jedis uno a uno cambiando el contenido del 
+        // mensaje en función del nombre del Jedi correspondiente
+        while(peopleToTransfer > 0){
+            if (dest == null) {
+                outbox = new ACLMessage();
+                outbox.setSender(getAID());
+                outbox.addReceiver(new AID(destProvider, AID.ISLOCALNAME));
+            } else { // Else follow the dialogue
+                outbox = dest.createReply();
+            } 
+               
+            outbox.setPerformative(ACLMessage.REQUEST);
+            outbox.setContent("TRANSFER " + peopleNames[peopleToTransfer-1]);
+            outbox.setProtocol("DROIDSHIP");
+            outbox.setConversationId(sessionKey);
+            outbox.setReplyWith(peopleNames[peopleToTransfer-1]);
+            this.LARVAsend(outbox);
+            dest = LARVAblockingReceive();
+
+            Info("================\n" + dest.getContent());
+            if (dest.getPerformative()==ACLMessage.INFORM){
+                    Info("Jedi named [" + peopleNames[peopleToTransfer-1] + "] has been transfered");
+                    peopleToTransfer -= 1;
+            }
+        }
+        
+        return myStatus;
+    }
+    
+    /**
+     * Selecciona el siguiente Goal preguntándole al SSD en caso de que 
+     * no tengamos
+     * @author David Correa
+     * 
+     */
     public Status MySelectGoal() {
-        Info("ESTOY EN EL SELECT GOALLLL");
+        if (goalCompleted) {
+            informBoss();
+            goalCompleted = false;
+        }
+        Info("Selecting goal...");
         if(getEnvironment().getCurrentMission()==null){
             Info("No current mission, selecting...");
             return this.SelectMission();
@@ -170,8 +264,7 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
         else{
             Info("Setting next goal...");
             getEnvironment().setNextGoal();
-
-            //En caso de haber acabado nuestra misión, esperamos indicaciones del SSD
+            
             if (getEnvironment().getCurrentMission().isOver()) {
                 Info("Mission is over, selecting...");
                 return this.SelectMission();
@@ -182,6 +275,7 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
 
     }
     
+    // Override por el JOINSESSION, antes íbamos a OPENPROBLEM
     @Override
     public Status MyCheckin() {
         Info("Loading passport and checking-in to LARVA");
@@ -231,7 +325,7 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
             }
         }
         System.out.println("Session key: "+sessionKey);
-                
+        // Como ITTs siempre aparecemos en Whitehorse
         current_city = "Whitehorse";
         
         outbox = new ACLMessage();
@@ -260,7 +354,6 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
           
         // Antes de seleccionar la misión es necesario actualizar las percepciones
         this.MyReadPerceptions();
-
         return Status.SELECTGOAL;
     }
         
@@ -286,7 +379,8 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
 //                }
 //            }
     
-    
+    // Función proporcionada por el profe, obtiene las misiones
+    // del SSD
     @Override
     public Status SelectMission(){
         controller = LARVAblockingReceive();
@@ -304,12 +398,118 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
         }
     }
     
+    // Solicita a un DROIDSHIP que venga a nuestra posición
+    // Es similar a cuando en LAB2 pedíamos al MTT que viniera a ayudarnos
+    public Status doRequestGoal(String type) {
+        int numMessage = 0;
+        
+        ArrayList<String> globalProviders = this.DFGetAllProvidersOf("TYPE "+type);
+        ArrayList<String> sessionProviders = new ArrayList<String>();
+        for(var provider : globalProviders) {
+            if (this.DFHasService(provider, sessionKey)) {
+                sessionProviders.add(provider);
+            }
+        }
+   
+        
+        boolean mttFound = false;
+        while (!mttFound){
+            for(String provider: sessionProviders){
+                outbox = new ACLMessage();
+                outbox.setSender(getAID());
+                outbox.addReceiver(new AID(provider, AID.ISLOCALNAME));
+                outbox.setPerformative(ACLMessage.REQUEST);
+                outbox.setProtocol("DROIDSHIP");
+                outbox.setConversationId(sessionKey);
+                outbox.setContent("BACKUP");
+                outbox.setReplyWith(String.valueOf(numMessage));
+                numMessage ++;
+                this.LARVAsend(outbox);
+
+                mtt = LARVAblockingReceive();
+                if (mtt.getPerformative()==ACLMessage.AGREE){
+                    mttFound = true;
+                    break;
+                }else if (mtt.getPerformative()==ACLMessage.REFUSE){
+                        mtt = LARVAblockingReceive();
+                }
+            }
+        }
+
+        boolean backupHasArrived = false;
+        while(!backupHasArrived){
+            mtt = LARVAblockingReceive();
+            if(mtt.getPerformative() == ACLMessage.INFORM)
+                backupHasArrived = true; 
+        }
+        
+        return Status.SELECTGOAL;
+    }
+    
+    // Función modificada, se han extraido fragmentos de la función del padre
+    @Override
+    protected AT_ST_FULL.Status doCapture(String  nCaptures, String type){
+        int i = 0;
+        int numCaptures = Integer.parseInt(nCaptures);
+        Info("Capturing " + nCaptures + " people " + type);
+        
+        // Hasta este punto la función es calcada a void EnergyRecharge().
+        // Ahora preguntamos al SM por los nombres de los Jedis y los vamos 
+        // capturando uno a uno, hasta que hemos llegado al número de capturas
+        // solicitadas
+
+        peopleNames = queryPeopleNames(type);
+        while (i < numCaptures){
+            outbox = session.createReply();
+            outbox.setContent("Request capture " + getEnvironment().getPeople()[i] + " session " + sessionKey);
+
+            outbox.setPerformative(ACLMessage.REQUEST);
+            outbox.setConversationId(sessionKey);
+            this.LARVAsend(outbox);
+            session = LARVAblockingReceive();
+            
+            if(session.getPerformative() == ACLMessage.INFORM)
+                ++i;
+        }
+        
+        // No liberamos el MTT en esta función, si no en otra ya que es un
+        // goal independiente
+        return Status.SELECTGOAL;
+    }
+    
+    // Manda el CANCEL al MTT que ha venido a ayudarnos
+    public Status doGoalCancel(String type) {
+        if (type.equals("MTT")) {
+            outbox = mtt.createReply();
+            outbox.setPerformative(ACLMessage.CANCEL);
+            outbox.setContent("");
+            outbox.setProtocol("DROIDSHIP");
+            outbox.setConversationId(sessionKey);
+            this.LARVAsend(outbox);
+        }
+        
+        return Status.SELECTGOAL;
+    }
+    
+    // Informa al SSD de los GOALS conseguidos, funcionalidad opcional
     public void informBoss(){
-        controller.createReply();
-        controller.setContent(E.getCurrentGoal());
-        controller.setConversationId(sessionKey);
-        controller.setPerformative(ACLMessage.INFORM_REF);
-        this.LARVAsend(outbox);
+        Info("Informing boss about the goal completed...");
+        controller_outbox = new ACLMessage();
+        
+        controller_outbox.setSender(getAID());
+        controller_outbox.addReceiver(new AID("SSD", AID.ISLOCALNAME));
+        
+        controller_outbox.setContent(E.getCurrentGoal());
+        controller_outbox.setConversationId(sessionKey);
+        // Cambio performativa
+        controller_outbox.setPerformative(ACLMessage.INFORM_REF);
+        
+        this.LARVAsend(controller_outbox);
+        //controller.setContent(E.getCurrentGoal());
+        //controller.setConversationId(sessionKey);
+        //controller.setPerformative(ACLMessage.INFORM_REF);
+        //this.LARVAsend(controller);
+        this.MyReadPerceptions();
     }
 }
 
