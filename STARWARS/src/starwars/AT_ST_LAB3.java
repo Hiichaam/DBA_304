@@ -123,10 +123,13 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
         current_goal = getEnvironment().getCurrentGoal().split(" ");
         
         Info("Current goal: "+current_goal[0]);
-  
+
         // Si el objetivo es movernos, utilizamos en asistente de LARVA
         // para desplazarnos y se realiza el algoritmo de movimiento
         if (current_goal[0].equals("MOVEIN")){
+            if(current_goal.length != 2){ 
+                current_goal [1] = current_goal[1].concat(" " + current_goal[2]);
+            }
             if (!getEnvironment().getCurrentCity().equals(current_goal[1])){
                 outbox = session.createReply();
                 outbox.setContent("Request course in " + current_goal[1] + " session " + sessionKey);
@@ -211,14 +214,15 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
             }
         }
         
-        int peopleToTransfer = peopleNames.length;
+        int peopleToTransfer = getEnvironment().getPayload();
         Info("We are Transfering " + peopleToTransfer );
         
         // Al primer if únicamente se accede al transferir el primer Jedi
         // (en principio) y sirve para configurar el mensaje. Después, vamos
         // transfiriendo los Jedis uno a uno cambiando el contenido del 
         // mensaje en función del nombre del Jedi correspondiente
-        while(peopleToTransfer > 0){
+        int i = 0;
+        while(i < peopleToTransfer){
             if (dest == null) {
                 outbox = new ACLMessage();
                 outbox.setSender(getAID());
@@ -228,17 +232,17 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
             } 
                
             outbox.setPerformative(ACLMessage.REQUEST);
-            outbox.setContent("TRANSFER " + peopleNames[peopleToTransfer-1]);
+            outbox.setContent("TRANSFER " + peopleNames[peopleToTransfer]);
             outbox.setProtocol("DROIDSHIP");
             outbox.setConversationId(sessionKey);
-            outbox.setReplyWith(peopleNames[peopleToTransfer-1]);
+            outbox.setReplyWith(peopleNames[peopleToTransfer]);
             this.LARVAsend(outbox);
             dest = LARVAblockingReceive();
 
             Info("================\n" + dest.getContent());
             if (dest.getPerformative()==ACLMessage.INFORM){
-                    Info("Jedi named [" + peopleNames[peopleToTransfer-1] + "] has been transfered");
-                    peopleToTransfer -= 1;
+                    Info("Jedi named [" + peopleNames[peopleToTransfer] + "] has been transfered");
+                    peopleToTransfer += 1;
             }
         }
         
