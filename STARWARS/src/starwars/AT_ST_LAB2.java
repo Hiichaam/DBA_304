@@ -21,6 +21,7 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
                           // averigua en String getMoveByCity(String droidship)
     String[] peopleNames; // Array de los nombres de los Jedis de una ciudad. Se
                           // averigua en String[] queryPeopleName(String type)
+    String[] peopleNamesToTransfer; // Numero de Jedis que se van a transferir. Se
     int EnergyLimitToAskRecharge = 15; // Umbral a partir del cual solicitamos recarga
     ACLMessage mtt, bb1f, dest; // Mensajes para cada NPC con el que se interactua
     
@@ -284,7 +285,6 @@ public class AT_ST_LAB2 extends AT_ST_LAB1{
         while (i < numCaptures){
             outbox = session.createReply();
             outbox.setContent("Request capture " + peopleNames[i] + " session " + sessionKey);
-
             outbox.setPerformative(ACLMessage.REQUEST);
             outbox.setConversationId(sessionKey);
             this.LARVAsend(outbox);

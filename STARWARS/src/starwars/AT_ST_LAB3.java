@@ -127,7 +127,7 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
         // Si el objetivo es movernos, utilizamos en asistente de LARVA
         // para desplazarnos y se realiza el algoritmo de movimiento
         if (current_goal[0].equals("MOVEIN")){
-            if(current_goal.length != 2){ 
+            if(current_goal.length != 2){
                 current_goal [1] = current_goal[1].concat(" " + current_goal[2]);
             }
             if (!getEnvironment().getCurrentCity().equals(current_goal[1])){
@@ -232,20 +232,20 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
             } 
                
             outbox.setPerformative(ACLMessage.REQUEST);
-            outbox.setContent("TRANSFER " + peopleNames[peopleToTransfer]);
+            outbox.setContent("TRANSFER " + peopleNames[i]);
             outbox.setProtocol("DROIDSHIP");
             outbox.setConversationId(sessionKey);
-            outbox.setReplyWith(peopleNames[peopleToTransfer]);
+            outbox.setReplyWith(peopleNames[i]);
             this.LARVAsend(outbox);
             dest = LARVAblockingReceive();
 
             Info("================\n" + dest.getContent());
             if (dest.getPerformative()==ACLMessage.INFORM){
-                    Info("Jedi named [" + peopleNames[peopleToTransfer] + "] has been transfered");
-                    peopleToTransfer += 1;
+                    Info("Jedi named [" + peopleNames[i] + "] has been transfered");
+                    i += 1;
             }
         }
-        
+
         return myStatus;
     }
     
@@ -461,12 +461,12 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
         // Ahora preguntamos al SM por los nombres de los Jedis y los vamos 
         // capturando uno a uno, hasta que hemos llegado al número de capturas
         // solicitadas
-
         peopleNames = queryPeopleNames(type);
+        var tmpNames = new ArrayList<String>();
         while (i < numCaptures){
             outbox = session.createReply();
             outbox.setContent("Request capture " + getEnvironment().getPeople()[i] + " session " + sessionKey);
-
+            tmpNames.add(getEnvironment().getPeople()[i]);
             outbox.setPerformative(ACLMessage.REQUEST);
             outbox.setConversationId(sessionKey);
             this.LARVAsend(outbox);
@@ -475,12 +475,14 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
             if(session.getPerformative() == ACLMessage.INFORM)
                 ++i;
         }
-        
+        peopleNamesToTransfer = tmpNames.toArray(new String[0]);
+
         // No liberamos el MTT en esta función, si no en otra ya que es un
         // goal independiente
+
         return Status.SELECTGOAL;
     }
-    
+
     // Manda el CANCEL al MTT que ha venido a ayudarnos
     public Status doGoalCancel(String type) {
         if (type.equals("MTT")) {
