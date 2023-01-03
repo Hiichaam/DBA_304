@@ -17,10 +17,9 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
     // Alias de nuestra sesion 
     String sessionAlias = "milanesa2";
     ACLMessage controller;
-    ACLMessage controller_outbox;
     boolean goalCompleted = false;
     int auxPayload;
-    String allMissions;
+    String allMissions, boss;
     @Override
     public void setup() {
         this.defSessionAlias(sessionAlias);
@@ -43,7 +42,7 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
                 myStatus = MyJoinSession();
                 break;
             case SELECTGOAL:
-                myStatus = MySelectGoal();
+                myStatus = SelectMission();
                 break;
             case SOLVEPROBLEM:
                 myStatus = MySolveProblem();
@@ -68,18 +67,17 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
             if ("MOVEIN".equals(current_goal[0])){
                 if (getEnvironment().getCurrentCity().equals(current_goal[1])){
                     Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!!!!!!!!");
-                    informBoss(false);
-                    //getEnvironment().setNextGoal();
-                    goalCompleted = true;
-                    return Status.SELECTGOAL;
+                    informBossGoal(this.getEnvironment().getCurrentGoal());
+                    this.getEnvironment().setNextGoal();
+                    return Status.SOLVEPROBLEM;
                 }
 	    } else { // "MOVEBY <droidship>".equals(current_goal)
 	    	if (getEnvironment().getCurrentCity().equals(city)){
                     Info("I am in "+city);
                     Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!");
-                    //getEnvironment().setNextGoal();
-                    goalCompleted = true;
-                    return Status.SELECTGOAL;
+                    informBossGoal(this.getEnvironment().getCurrentGoal());
+                    this.getEnvironment().setNextGoal();
+                    return Status.SOLVEPROBLEM;
                 }
 	    }
             Alert("Found no plan to execute");
@@ -116,8 +114,8 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
     public AT_ST_FULL.Status MySolveProblem(){
         if (getEnvironment().getCurrentMission().isOver()){
             Info("The problem is over");
-            Message("The problem " + problem + " has been solved");
-            return this.SelectMission();
+            Message("The mission has been solved");
+            return informBossMission();
         }
         
         // Obtenemos el objetivo actual. Los objetivos van separados por espacios
@@ -146,69 +144,45 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
                 return MovementGoal("");
             } else {
                 Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!");
-                goalCompleted = true;
-                 if (goalCompleted) {
-                    informBoss(false);
-                    goalCompleted = false;
-                }
-                return Status.SELECTGOAL;
+                informBossGoal(this.getEnvironment().getCurrentGoal());
+                this.getEnvironment().setNextGoal();
+                return Status.SOLVEPROBLEM;
             }  
         // Si el objetivo es listar, obtenemos la lista de personas dado un tipo
         // y se avanza al siguiente objetivo
         } else if (current_goal[0].equals("LIST")){
             doQueryPeople(current_goal[1]);
             Info("Goal " + current_goal[0] + " " + current_goal[1] + " " + current_goal[2] + " has been solved!");
-            goalCompleted = true;
-                   if (goalCompleted) {
-            informBoss(false);
-            this.MyReadPerceptions();
-            goalCompleted = false;
-        }
-            return Status.SELECTGOAL;
+            informBossGoal(this.getEnvironment().getCurrentGoal());
+            this.getEnvironment().setNextGoal();        
+            return Status.SOLVEPROBLEM;
         } else if (current_goal[0].equals("REPORT")){
             doReportTypeGoal(current_goal[1]);
             Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!");
-            goalCompleted = true;
-                   if (goalCompleted) {
-            informBoss(false);
-            this.MyReadPerceptions();
-            goalCompleted = false;
-        }
-            return Status.SELECTGOAL;
+            informBossGoal(this.getEnvironment().getCurrentGoal());
+            this.getEnvironment().setNextGoal();        
+            return Status.SOLVEPROBLEM;
         } else if (current_goal[0].equals("REQUEST")){
             doRequestGoal(current_goal[1]);
             Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!");
-            goalCompleted = true;
-                   if (goalCompleted) {
-            informBoss(false);
-            this.MyReadPerceptions();
-            goalCompleted = false;
-        }
-            return Status.SELECTGOAL;
+            informBossGoal(this.getEnvironment().getCurrentGoal());
+            this.getEnvironment().setNextGoal();        
+            return Status.SOLVEPROBLEM;        
         } else if (current_goal[0].equals("CAPTURE")){
             doCapture(current_goal[1], current_goal[2]);
             Info("Goal " + this.getEnvironment().getCurrentGoal() + " has been solved!");
-            goalCompleted = true;
             auxPayload = Integer.parseInt(current_goal[1]);
-            
-            if (goalCompleted) {
-                for (int i=0; i<auxPayload; i++)
-                    informBoss(false);
-            this.MyReadPerceptions();
-            goalCompleted = false;
-        }
-            return Status.SELECTGOAL;
+            for(int i=0; i<auxPayload; i++)
+                informBossGoal(this.getEnvironment().getCurrentGoal());
+            this.getEnvironment().setNextGoal();        
+            return Status.SOLVEPROBLEM;           
         } else if (current_goal[0].equals("CANCEL")){
             doGoalCancel("MTT");
             Info("Goal " + this.getEnvironment().getCurrentGoal() + " has been solved!");
-            goalCompleted = true;
-            if (goalCompleted) {
-                    informBoss(false);
-            this.MyReadPerceptions();
-            goalCompleted = false;
-        }
-            this.MyReadPerceptions();
-            return Status.SELECTGOAL;
+            informBossGoal(this.getEnvironment().getCurrentGoal());
+            this.getEnvironment().setNextGoal();        
+            return Status.SOLVEPROBLEM;
+        
         } else if (current_goal[0].equals("MOVEBY")){
             if (destCity.equals("")){
                 destCity = getMoveByCity(current_goal[1]);
@@ -216,7 +190,7 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
             } else {
                 Info("Goal " + current_goal[0] + " " + current_goal[1] + " has been solved!");
                 goalCompleted = true;
-                return Status.SELECTGOAL;
+                return Status.SOLVEPROBLEM;
             }
         } else if (current_goal[0].equals("TRANSFER")){
             Info("Estoy en el transfer");
@@ -231,16 +205,12 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
             doTransfer();
             
             Info("Goal " + this.getEnvironment().getCurrentGoal() + " has been solved!");
-            goalCompleted = true;
-                   
-            if (goalCompleted) {
-                for (int i=0; i<auxPayload; i++)
-                    informBoss(false);
+                  
+            for(int i=0; i<auxPayload; i++)
+                informBossGoal(this.getEnvironment().getCurrentGoal());
                     
-                goalCompleted=false;
-                return informBoss(true);
-            }
-            return Status.SELECTGOAL;            
+                
+            return Status.SOLVEPROBLEM;            
         }
         
         return Status.EXIT;
@@ -382,8 +352,7 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
         outbox.setConversationId(sessionKey);
         
         this.resetAutoNAV();
-        this.DFAddMyServices(new String[]{"TYPE ITT"});
-        this.DFAddMyServices(new String[]{"TEAM " + sessionAlias});
+        this.DFAddMyServices(new String[]{"TYPE ITT", "TEAM " + sessionAlias});
         
         this.LARVAsend(outbox);
         session = this.LARVAblockingReceive();
@@ -394,6 +363,13 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
         }
         
         outbox = session.createReply();
+        outbox = session.createReply();
+        outbox.setContent("Query missions session " + sessionKey);
+        outbox.setPerformative(ACLMessage.QUERY_REF);
+        outbox.setConversationId(sessionKey);
+        this.LARVAsend(outbox);
+        session = this.LARVAblockingReceive();
+        this.getEnvironment().setExternalPerceptions(session.getContent());
           
         // Antes de seleccionar la misión es necesario actualizar las percepciones
         this.MyReadPerceptions();
@@ -428,9 +404,8 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
     public Status SelectMission(){
         controller = LARVAblockingReceive();
         if(controller.getPerformative() == ACLMessage.REQUEST){
-            allMissions = controller.getContent();
-            Info(allMissions);
-            this.getEnvironment().makeCurrentMission(allMissions);
+            boss = controller.getSender().getLocalName();
+            this.getEnvironment().makeCurrentMission(controller.getContent());
             this.MyReadPerceptions();
             resetAutoNAV();
             this.getEnvironment().resetCourse();
@@ -489,7 +464,7 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
                 backupHasArrived = true; 
         }
         
-        return Status.SELECTGOAL;
+        return Status.SOLVEPROBLEM;
     }
     
     // Función modificada, se han extraido fragmentos de la función del padre
@@ -540,41 +515,27 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
     }
     
     // Informa al SSD de los GOALS conseguidos, funcionalidad opcional
-    public Status informBoss(boolean missionOver){
-        if (!missionOver){
-            Info("Informing boss about the goal completed...");
+    public void informBossGoal(String goalName){
+        outbox = controller.createReply();
 
-            controller_outbox = new ACLMessage();
-
-            controller_outbox.setSender(getAID());
-            controller_outbox.addReceiver(new AID("SSD", AID.ISLOCALNAME));
-
-            controller_outbox.setContent(this.getEnvironment().getCurrentGoal());
-            controller_outbox.setConversationId(sessionKey);
-            // Cambio performativa
-            controller_outbox.setPerformative(ACLMessage.INFORM_REF);
-
-            this.LARVAsend(controller_outbox);
+        if (goalName.startsWith("TRANSFER")){
+            outbox.setContent("TRANSFER");
         }
-        //controller.setContent(E.getCurrentGoal());
-        //controller.setConversationId(sessionKey);
-        //controller.setPerformative(ACLMessage.INFORM_REF);
-        //this.LARVAsend(controller);
-        if (missionOver){
-            Info("Informing boss about the mission completed...");
-            controller_outbox = new ACLMessage();
+        else
+            outbox.setContent(goalName);
+        outbox.setPerformative(ACLMessage.INFORM_REF);
+        outbox.setConversationId(sessionAlias);
 
-            controller_outbox.setSender(getAID());
-            controller_outbox.addReceiver(new AID("SSD", AID.ISLOCALNAME));
-
-            controller_outbox.setContent(this.getEnvironment().getCurrentMission().toString());
-            controller_outbox.setConversationId(sessionKey);
-            // Cambio performativa
-            controller_outbox.setPerformative(ACLMessage.INFORM);
-            this.LARVAsend(controller_outbox);
-            return Status.SELECTGOAL;
-        }
-        return myStatus;
+        this.LARVAsend(outbox);
+    }
+    
+    public Status informBossMission(){
+        outbox = controller.createReply();        
+        outbox.setContent(this.getEnvironment().getCurrentMission().getName());
+        outbox.setPerformative(ACLMessage.INFORM);
+        
+        this.LARVAsend(outbox);
+        return Status.SELECTGOAL;
     }
 }
 
