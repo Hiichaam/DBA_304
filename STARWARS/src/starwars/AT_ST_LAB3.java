@@ -499,7 +499,100 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
 
         return Status.SELECTGOAL;
     }
+    
+    public void EnergyRecharge() {
+        int numMessage = 0;
 
+        // Seleccionamos los BB1F de nuestra session y los guardamos en sessionProviders
+        Info("Recharging... (asking BB1F)");
+        ArrayList<String> globalProviders = this.DFGetAllProvidersOf("TYPE BB1F");
+        ArrayList<String> sessionProviders = new ArrayList<String>();
+        for(var globalProvider : globalProviders) {
+            if (this.DFHasService(globalProvider, sessionKey)) {
+                sessionProviders.add(globalProvider);
+            }
+        }
+        ArrayList<Integer> distances = new ArrayList<Integer>();
+
+        // Ordenamos los BB1F por cercanía
+        // NOTA: Queda comentado hasta que Luis cambie el numero máximo de TRANSPONDER
+        
+        /*for(var provider : providers){
+            outbox = new ACLMessage();
+            outbox.setSender(getAID());
+            outbox.addReceiver(new AID(provider, AID.ISLOCALNAME));
+            outbox.setProtocol("DROIDSHIP");
+            outbox.setPerformative(ACLMessage.QUERY_REF);
+            outbox.setReplyWith(String.valueOf(numMessage));
+            numMessage ++;
+            outbox.setContent("TRANSPONDER");
+            this.LARVAsend(outbox);
+            session = LARVAblockingReceive();
+            long time = 500;
+            try {
+                TimeUnit.SECONDS.sleep(1);
+            } catch (InterruptedException e){};
+            contentTokens = session.getContent().split("/");
+            String coordinates = contentTokens[4];
+            coordinates = coordinates.replace("GPS ", "");
+
+            var location = new Point3D(coordinates);
+            distances.add(E.getGPS().gridDistanceTo(location));
+        }
+
+        Map<Integer, String> map = new HashMap<Integer, String>();
+        for(Integer i = 0; i < providers.size(); i++) {
+          map.put(distances.get(i),providers.get(i));
+        }
+
+        Collections.sort(distances);
+        providers.clear();
+
+        for(Integer i = 0; i < map.size(); i++) {
+          providers.add(map.get(distances.get(i)));
+        }*/
+        
+        // Solicitamos recarga a todos los BB1F (por cercanía) hasta que
+        // recibimos un AGREE por parte de alguno. Luego le enviamos nuestras
+        // coordenadas
+        boolean rechargeAgentFound = false;
+        while (!rechargeAgentFound){
+            for(String provider: sessionProviders){
+                outbox = new ACLMessage();
+                outbox.setSender(getAID());
+                outbox.addReceiver(new AID(provider, AID.ISLOCALNAME));
+                outbox.setPerformative(ACLMessage.REQUEST);
+                outbox.setProtocol("DROIDSHIP");
+                outbox.setConversationId(sessionKey);
+                outbox.setContent("REFILL");
+                outbox.setReplyWith(String.valueOf(numMessage));
+                numMessage ++;
+                this.LARVAsend(outbox);
+
+                bb1f = LARVAblockingReceive();
+                if (bb1f.getPerformative()==ACLMessage.AGREE){
+                    rechargeAgentFound = true;
+                    break;
+                }else if (bb1f.getPerformative()==ACLMessage.REFUSE){
+                        continue;
+                }
+            }
+        }
+        
+        // Esperamos hasta que llegue el BB1F y nos recargue. Cuando nos recarga,
+        // salimos del bucle de espera (while) y leemos percepciones. La recarga
+        // ha sido realizada correctamente
+        boolean chargeDone = false;
+        while(!chargeDone){
+            bb1f = LARVAblockingReceive();
+            if(bb1f.getPerformative() == ACLMessage.INFORM)
+                chargeDone = true;
+        }
+        
+        this.MyReadPerceptions();
+        Info("Rechage completed");
+    }
+    
     // Manda el CANCEL al MTT que ha venido a ayudarnos
     public Status doGoalCancel(String type) {
         if (type.equals("MTT")) {
