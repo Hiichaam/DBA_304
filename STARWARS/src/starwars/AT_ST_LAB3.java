@@ -209,7 +209,7 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
             for(int i=0; i<auxPayload; i++)
                 informBossGoal(this.getEnvironment().getCurrentGoal());
                     
-                
+            this.getEnvironment().setNextGoal();        
             return Status.SOLVEPROBLEM;            
         }
         
