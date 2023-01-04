@@ -339,7 +339,7 @@ public class AT_ST_LAB3 extends AT_ST_LAB2 {
         }
         System.out.println("Session key: "+sessionKey);
         // Como ITTs siempre aparecemos en Whitehorse
-        current_city = "Whitehorse";
+        current_city = "Hartley";
         
         outbox = new ACLMessage();
         outbox.setSender(this.getAID());
